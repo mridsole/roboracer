@@ -1,0 +1,12 @@
+# Ardunio Code gitignore
+
+# Ignore Everything
+/*
+
+# Except for these
+!/motor_control
+!/motor_control/**
+!.gitignore
+!*.ino
+!*.cpp
+!*.h
