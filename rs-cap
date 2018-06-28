@@ -5,7 +5,45 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import click
-import curses
+import h5py
+from threading import Thread, Lock, Event
+from multiprocessing import Process
+
+
+class WriterThread(Thread):
+
+
+    def run(self):
+        
+        while True:
+
+            # Wait for the ready event.
+            self.depth_ready.wait()
+
+            # with self.depth_lock:
+
+            # Get the buffer size, and current number of frames.
+            buf_size, _, _ = self.depth_buf.shape
+            F, _, _ = self.depth_dset.shape
+
+            # Write the data.
+            self.depth_dset[(F - buf_size):F, :, :] = self.depth_buf
+
+            self.depth_ready.clear()
+
+
+    def __init__(self, depth_dset, depth_buf, depth_lock, depth_ready):
+
+        Thread.__init__(self)
+        
+        # Store reference to depth dataset and depth frame buffer.
+        self.depth_dset = depth_dset
+        self.depth_buf = depth_buf
+
+        # Store the depth buffer ready event.
+        self.depth_lock = depth_lock
+        self.depth_ready = depth_ready
+
 
 @click.command()
 @click.option(
@@ -16,7 +54,7 @@ import curses
 @click.option(
     '--depth-filename',
     required=True,
-    help='Filename for depth video output (should end in .avi).'
+    help='Filename for depth video output (should end in .h5).'
 )
 @click.option(
     '--color-filename',
@@ -29,12 +67,16 @@ def rscap(display, depth_filename, color_filename):
     the videos to the given filenames.
     """
 
-    if not depth_filename.endswith('.avi') or not color_filename.endswith('.avi'):
-        raise Exception('Output filenames must end with \'.avi\'.')
+    if not depth_filename.endswith('.h5') or not color_filename.endswith('.avi'):
+        raise Exception('Output filename extensions are incorrect.')
 
     # TODO: Allow configurable resolution and FPS.
     DIMS = (1280, 720)
     FPS = 30
+
+    # Record at most one minute of data.
+    # MAX_FRAMES = FPS * 60
+    MAX_FRAMES = None
 
     # RealSense configuration.
     config = rs.config()
@@ -45,11 +87,41 @@ def rscap(display, depth_filename, color_filename):
     pipeline = rs.pipeline()
     pipeline.start(config)
 
-    # Create OpenCV video writers for each stream.
-    depth_f = cv2.VideoWriter(depth_filename, 0, FPS, DIMS)
+    # Create OpenCV video writer for the color stream.
     color_f = cv2.VideoWriter(color_filename, cv2.VideoWriter_fourcc(*'XVID'), FPS, DIMS)
 
-    # TODO: Stopping condition.
+    # Write depth frames in chunks for performance.
+    BUF_SIZE = 200
+    depth_data_buf = np.zeros((BUF_SIZE, DIMS[1], DIMS[0]))
+    depth_data_buf_latch = np.zeros((BUF_SIZE, DIMS[1], DIMS[0]))
+
+    # Use h5py to save the depth data.
+    depth_f = h5py.File(depth_filename, 'w', libver='latest')
+    depth_dset = depth_f.create_dataset(
+        'depth', 
+        (0, DIMS[1], DIMS[0]), 
+        dtype=np.uint16,
+        # NOTE: specifying maxshape results in chunking anyway.
+        # chunks=(DIMS[1], DIMS[0], FPS),
+        maxshape=(MAX_FRAMES, DIMS[1], DIMS[0])
+    )
+
+    depth_lock = Lock()
+    depth_ready = Event()
+    depth_lock_acquired = True
+
+    # Depth buffer writer.
+    depth_writer_thread = WriterThread(depth_dset, depth_data_buf_latch, 
+                                       depth_lock, depth_ready)
+
+    # Acquire the depth lock, then run the writer.
+    depth_lock.acquire(blocking=True)
+    depth_writer_thread.start()
+
+    # How many frames have we recorded?
+    nframes = 0
+
+    # TODO: Stopping condition (currently just C-c).
     while(True):
         
         # Wait for frames.
@@ -74,20 +146,32 @@ def rscap(display, depth_filename, color_filename):
             cv2.imshow('color', color_data)
             cv2.waitKey(1)
 
-        # Write frames to feed.
+        # Write color frames to feed.
         color_f.write(color_data)
 
-        # Need to do some hackery to write depth: pack 16 bytes into
-        # two 8-byte channels. B: high byte, G: low byte, R: empty.
-        depth_data_BGR = np.array([ 
-            depth_data >> 8, 
-            depth_data % 2**8,
-            0 * depth_data
-        ], dtype=np.uint8).transpose([1, 2, 0])
+        # Resize the HDF5 dataset to include another depth frame.
+        depth_dset.resize((
+            depth_dset.shape[0] + 1,
+            depth_dset.shape[1],
+            depth_dset.shape[2]
+        ))
 
-        # import IPython; IPython.embed()
+        # Accumulate buffer.
+        depth_data_buf[nframes % BUF_SIZE, :, :] = depth_data
 
-        depth_f.write(depth_data_BGR)
+        # Write?
+        print(nframes)
+        if nframes % BUF_SIZE == BUF_SIZE - 1:
+
+            if not depth_lock_acquired: depth_lock.acquire()
+            depth_lock_acquired = True
+            depth_data_buf_latch[:,:,:] = depth_data_buf
+            depth_lock.release(); depth_lock_acquired = False
+            depth_ready.set()
+
+        # TODO: it's still blocking
+
+        nframes += 1
 
     # Release VideoWriter handles and clean up any windows.
     depth_f.release()
