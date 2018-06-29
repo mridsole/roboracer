@@ -6,43 +6,6 @@ import matplotlib.pyplot as plt
 import cv2
 import click
 import h5py
-from threading import Thread, Lock, Event
-from multiprocessing import Process
-
-
-class WriterThread(Thread):
-
-
-    def run(self):
-        
-        while True:
-
-            # Wait for the ready event.
-            self.depth_ready.wait()
-
-            # with self.depth_lock:
-
-            # Get the buffer size, and current number of frames.
-            buf_size, _, _ = self.depth_buf.shape
-            F, _, _ = self.depth_dset.shape
-
-            # Write the data.
-            self.depth_dset[(F - buf_size):F, :, :] = self.depth_buf
-
-            self.depth_ready.clear()
-
-
-    def __init__(self, depth_dset, depth_buf, depth_lock, depth_ready):
-
-        Thread.__init__(self)
-        
-        # Store reference to depth dataset and depth frame buffer.
-        self.depth_dset = depth_dset
-        self.depth_buf = depth_buf
-
-        # Store the depth buffer ready event.
-        self.depth_lock = depth_lock
-        self.depth_ready = depth_ready
 
 
 @click.command()
@@ -61,7 +24,13 @@ class WriterThread(Thread):
     required=True,
     help='Filename for color video output (should end in .avi).'
 )
-def rscap(display, depth_filename, color_filename):
+@click.option(
+    '--frames',
+    required=True,
+    type=int,
+    help='How many frames should we capture?'
+)
+def rscap(display, depth_filename, color_filename, frames):
     """
     Capture depth and color streams from stereo camera, and save
     the videos to the given filenames.
@@ -91,38 +60,21 @@ def rscap(display, depth_filename, color_filename):
     color_f = cv2.VideoWriter(color_filename, cv2.VideoWriter_fourcc(*'XVID'), FPS, DIMS)
 
     # Write depth frames in chunks for performance.
-    BUF_SIZE = 200
-    depth_data_buf = np.zeros((BUF_SIZE, DIMS[1], DIMS[0]))
-    depth_data_buf_latch = np.zeros((BUF_SIZE, DIMS[1], DIMS[0]))
+    depth_data_buf = np.zeros((frames, DIMS[1], DIMS[0]), dtype=np.uint16)
 
     # Use h5py to save the depth data.
     depth_f = h5py.File(depth_filename, 'w', libver='latest')
     depth_dset = depth_f.create_dataset(
         'depth', 
-        (0, DIMS[1], DIMS[0]), 
+        (frames, DIMS[1], DIMS[0]), 
         dtype=np.uint16,
         # NOTE: specifying maxshape results in chunking anyway.
         # chunks=(DIMS[1], DIMS[0], FPS),
         maxshape=(MAX_FRAMES, DIMS[1], DIMS[0])
     )
 
-    depth_lock = Lock()
-    depth_ready = Event()
-    depth_lock_acquired = True
-
-    # Depth buffer writer.
-    depth_writer_thread = WriterThread(depth_dset, depth_data_buf_latch, 
-                                       depth_lock, depth_ready)
-
-    # Acquire the depth lock, then run the writer.
-    depth_lock.acquire(blocking=True)
-    depth_writer_thread.start()
-
-    # How many frames have we recorded?
-    nframes = 0
-
     # TODO: Stopping condition (currently just C-c).
-    while(True):
+    for frame in range(frames):
         
         # Wait for frames.
         frames = pipeline.wait_for_frames()
@@ -149,32 +101,16 @@ def rscap(display, depth_filename, color_filename):
         # Write color frames to feed.
         color_f.write(color_data)
 
-        # Resize the HDF5 dataset to include another depth frame.
-        depth_dset.resize((
-            depth_dset.shape[0] + 1,
-            depth_dset.shape[1],
-            depth_dset.shape[2]
-        ))
-
         # Accumulate buffer.
-        depth_data_buf[nframes % BUF_SIZE, :, :] = depth_data
+        depth_data_buf[frame, :, :] = depth_data
 
-        # Write?
-        print(nframes)
-        if nframes % BUF_SIZE == BUF_SIZE - 1:
+    print('Captured ' + str(frames) + ' frames.')
 
-            if not depth_lock_acquired: depth_lock.acquire()
-            depth_lock_acquired = True
-            depth_data_buf_latch[:,:,:] = depth_data_buf
-            depth_lock.release(); depth_lock_acquired = False
-            depth_ready.set()
-
-        # TODO: it's still blocking
-
-        nframes += 1
+    # Write the depth buffer.
+    print('Writing depth dataset ...')
+    depth_dset[:,:,:] = depth_data_buf
 
     # Release VideoWriter handles and clean up any windows.
-    depth_f.release()
     color_f.release()
     cv2.destroyAllWindows()
 
