@@ -14,7 +14,7 @@
 #define INPUT_VOLTAGE 12.6
 #define MAX_VOLTAGE 6
 #define CONTROL_RATIO MAX_VOLTAGE/INPUT_VOLTAGE
-#define MAX_PWM 255*CONTROL_RATIO
+#define MAX_PWM 1024*CONTROL_RATIO
 #define MAX_RPM 295
 #define MAX_RAD_PER_S 30.8923
 
@@ -23,12 +23,16 @@ uint8_t incomingByte = 0;
 uint8_t buff[MAX_LEN];
 
 /* -- Output Pins -- */
-int frontRight = 3;
-int frontLeft = 3;
-int backRight = 3;
-int backLeft = 3;
-int dummyPin = 3;
+int frontRight = 5;
+int frontLeft = 5;
+int backRight = 5;
+int backLeft = 5;
+int dummyPin = 5;
 
+/* Timout Variables */
+const unsigned long TIMEOUT = 1000;
+unsigned long timeElapsed = 0;
+unsigned long previousTime;
 
 /**
 * @brief Setup
@@ -39,6 +43,17 @@ int dummyPin = 3;
 void setup() {
   Serial.begin(250000);
   Serial.setTimeout(5);
+
+  previousTime = millis();
+
+  /* Change PWM Outputs to 10 bits */
+  TCCR1B &= ~(1 << CS12);
+  TCCR1B  |=   (1 << CS11);
+  TCCR1B &= ~(1 << CS10);  
+  TCCR1B &= ~(1 << WGM13);    // Timer B clear bit 4
+  TCCR1B |=  (1 << WGM12);    // set bit 3
+  TCCR1A |= (1 << WGM11);    //  Timer A set bit 1
+  TCCR1A |= (1 << WGM10);    //  set bit 0
 }
 
 
@@ -49,12 +64,18 @@ void setup() {
 * @return Does not return
 */
 void loop() {
+  /* First check if there has been a timeout */
+  if(millis()-previousTime > TIMEOUT){
+    disable(); 
+  }
+  
   String inString;
   String instructionString = "<>";
 
   /* Read a string terminated by "\n\r" */
   if(Serial.available() > 0){
     inString = Serial.readString();
+    previousTime = millis();
   }
 
   /* Manipulate string to determine action */
@@ -122,8 +143,8 @@ void enable(){
   /* Set PWM pins */
   frontRight = 10;
   frontLeft = 11;
-  backRight = 5;
-  backLeft = 6;
+  backRight = 3;
+  backLeft = 9;
   
   /* Set all PWM Pins to 0% */
   analogWrite(frontRight, 0);
