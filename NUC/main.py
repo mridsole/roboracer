@@ -30,7 +30,7 @@ while True:
 
     # Get depth color map
     import IPython; IPython.embed()
-    depth_data = (2**8) * np.round(depth_data / 2**8)
+    # depth_data = (2**8) * np.round(depth_data / 2**8)
     depth_colormap = cv2.applyColorMap(
         cv2.convertScaleAbs(depth_data, alpha=0.03), 
         cv2.COLORMAP_JET
