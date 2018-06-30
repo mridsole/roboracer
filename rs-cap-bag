@@ -4,8 +4,6 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 import click
-import h5py
-import time
 
 
 @click.command()
@@ -18,13 +16,6 @@ import time
     '--filename',
     required=True,
     help='Filename for depth video output (should end in .bag).'
-)
-@click.option(
-    '--max-duration',
-    default=5.,
-    required=False,
-    type=float,
-    help='Maximum duration to record.'
 )
 @click.option(
     '--width',
@@ -47,7 +38,7 @@ import time
     type=int,
     help='Recording FPS.'
 )
-def rscapbag(display, filename, max_duration, width, height, fps):
+def rscapbag(display, filename, width, height, fps):
     """
     Capture and save depth and color streams from stereo camera.
     Saves as a ROS bag.
@@ -55,8 +46,6 @@ def rscapbag(display, filename, max_duration, width, height, fps):
 
     if not filename.endswith('.bag'):
         raise Exception('Output filename extension must be \'.bag\'.')
-
-    assert(max_duration > 0)
 
     # TODO: Allow configurable resolution and FPS.
     dims = (width, height)
@@ -75,8 +64,11 @@ def rscapbag(display, filename, max_duration, width, height, fps):
     recorder = rs.recorder(filename, device)
 
     # Loop until Ctrl-C.
-    time.sleep(max_duration)
-    recorder.pause()
+    while True:
+        stop = input('Recording ...')
+        recorder.pause()
+        stop = input('Paused.')
+        recorder.resume()
 
 if __name__ == '__main__':
     rscapbag()
