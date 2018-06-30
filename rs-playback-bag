@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+import numpy as np
+import cv2
+import click
+import pyrealsense2 as rs
+
+
+@click.command()
+@click.option(
+    '--filename',
+    required=True,
+    help='Filename for the .bag file.'
+)
+def rsplaybackbag(filename):
+    """
+    Play back captured depth and color video files.
+    """
+
+    if not filename.endswith('.bag'):
+        raise Exception('Filename extension should be \'.bag\'.')
+
+    print('Initializing pipeline')
+    
+    cfg = rs.config()
+    cfg.enable_device_from_file(filename)
+    pipeline = rs.pipeline()
+    profile = pipeline.start(cfg)
+
+    print('Starting playback')
+
+    while True:
+
+        frames = pipeline.wait_for_frames()
+        depth_fr = frames.get_depth_frame()
+        color_fr = frames.get_color_frame()
+        if not depth_fr or not color_fr: continue
+
+        # Get depth and color as numpy arrays.
+        depth_data = np.asanyarray(depth_fr.as_frame().get_data())
+        color_data = np.asanyarray(color_fr.as_frame().get_data())
+
+        # Obtain and display the depth frame.
+        depth_colormap = cv2.applyColorMap(
+            cv2.convertScaleAbs(depth_data, alpha=0.03),
+            cv2.COLORMAP_JET
+        )
+        cv2.imshow('depth', depth_colormap)
+        cv2.waitKey(1)
+
+
+if __name__ == '__main__':
+    rsplaybackbag()

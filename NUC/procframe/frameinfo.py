@@ -31,7 +31,7 @@ class FrameInfo:
 
     def __init__(
             self, color_frame, depth_frame, 
-            options=FrameInfo.DEFAULT_OPTIONS
+            options=DEFAULT_OPTIONS
     ):
         """
         :param color_frame: The [3,H,W] BGR np array color image (uint8).
@@ -40,14 +40,14 @@ class FrameInfo:
         """
         
         # Store the two frames.
-        self._color = color
-        self._depth = depth
+        self._color = color_frame
+        self._depth = depth_frame
 
         # Get color image in HLS space (hue-lightness-saturation).
         self._hls = cv2.cvtColor(self._color, cv2.COLOR_BGR2HLS)
 
         # Store the options.
-        self._options = options
+        self.options = options
         # self._depth_scale = options['DEPTH_SCALE']
 
         # Dimensions of the frames.
@@ -96,29 +96,29 @@ class FrameInfo:
 
 
     @property
-    def line_obstacle_mask(self):
+    def obstacle_mask(self):
         """
         Image mask for the obstacles.
         """
 
-        if self._line_obstacle_mask is None:
+        if self._obstacle_mask is None:
             (low, high) = self.options['THRESH_OBSTACLES']
-            self.line_obstacle_mask = cv2.inRange(self._hls, low, high)
+            self._obstacle_mask = cv2.inRange(self._hls, low, high)
         
-        return self._line_obstacle_mask
+        return self._obstacle_mask
 
 
     @property
-    def line_cars_mask(self):
+    def cars_mask(self):
         """
         Image mask for the other cars.
         """
 
-        if self._line_cars_mask is None:
+        if self._cars_mask is None:
             (low, high) = self.options['THRESH_CARS']
-            self.line_cars_mask = cv2.inRange(self._hls, low, high)
+            self._cars_mask = cv2.inRange(self._hls, low, high)
         
-        return self._line_cars_mask
+        return self._cars_mask
 
 
     @property
