@@ -1,18 +1,27 @@
-from procframe.frameinfo import FrameInfo
-import cv2
-import h5py
+import pyrealsense2 as rs
+import numpy as np
+from procframe import FrameInfo
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import IPython
 
-# Load some data
+# Testing FrameInfo
 
-color_cap = cv2.VideoCapture('../data/color-obs2.avi')
-depth_data = h5py.File('../data/depth-obs2.h5', 'r')['depth']
+# Device setup.
+config = rs.config()
+config.enable_device_from_file('../data/home2.bag')
+config.enable_all_streams()
+pipeline = rs.pipeline()
+pipeline.start(config)
 
-i = 0
+# Capture frames for debugging
 while True:
-    ret, color_frame = color_cap.read()
-    if not ret: break
 
-    depth_frame = depth_data[i,:,:]
-    finfo = FrameInfo(color_frame, depth_frame)
-
-    i += 1
+    frames = pipeline.wait_for_frames()
+    depth_frame = frames.get_depth_frame()
+    color_frame = frames.get_color_frame()
+    if not depth_frame or not color_frame: continue
+    
+    frinfo = FrameInfo(color_frame, depth_frame)
+    print(frinfo.line_l_mask.dtype)
+    IPython.embed()

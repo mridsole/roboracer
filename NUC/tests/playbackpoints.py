@@ -44,7 +44,7 @@ while True:
 
     print('Points before removal: ', pts3d.shape[0])
 
-    # IPython.embed()
+    IPython.embed()
 
     # Remove points that have z < 0.3
     pts3d = pts3d[pts3d[:, 2] > 0.3, :]
