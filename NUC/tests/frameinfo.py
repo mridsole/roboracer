@@ -23,5 +23,10 @@ while True:
     if not depth_frame or not color_frame: continue
     
     frinfo = FrameInfo(color_frame, depth_frame)
-    print(frinfo.line_l_mask.dtype)
-    IPython.embed()
+    # print(frinfo.line_l_mask.dtype)
+    # print(frinfo.ground_plane)
+    # print(frinfo.Tcp)
+    # x = frinfo.Tcp
+    x = frinfo.ground_plane
+    pts = frinfo.pts_camera_to_plane(frinfo.lines_pts)
+    print(pts.shape)
