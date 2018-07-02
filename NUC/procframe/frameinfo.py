@@ -16,29 +16,88 @@ class FrameInfo:
      [x] Somehow find the 'ground plane' (RANSAC?)
     """
 
+    def THRESH_BLUE_LINE(x_bgr):
+
+        THRESH_1 = (
+            np.array([193/2, 50, 55]),
+            np.array([220/2, 210, 255]) 
+        )
+
+        # THRESH_2 = (
+        #     np.array([199/2, 80, 60]),
+        #     np.array([219/2, 140, 255]) 
+        # )
+        THRESH_2 = THRESH_1
+
+        t1 = cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
+        t2 = cv2.inRange(x_bgr, THRESH_2[0], THRESH_2[1])
+
+        return cv2.bitwise_or(t1, t2)
+
+
+    def THRESH_YELLOW_LINE(x_bgr):
+
+        THRESH_1 = (
+            np.array([38/2, 25, 60]),
+            np.array([75/2, 200, 255]) 
+        )
+
+        return cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
+        # t2 = cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
+
+        # return cv2.bitwise_or(t1, t2)
+
+    
+    def THRESH_OBSTACLES(x_bgr):
+
+        THRESH_1 = (
+            np.array([245/2, 20, 40]),
+            np.array([300/2, 190, 255]) 
+        )
+
+        return cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
+
+
 
     DEFAULT_OPTIONS = {
-
-        # Depth buffer resolution in metres.
-        'DEPTH_SCALE': 0.001,
 
         # Minimum z distance of the depth buffer (below which values are invalid).
         'DEPTH_MINIMUM': 0.3,
 
         # Sample only this many points for the lines in 3D.
         'LINES_SUBSAMPLE_N': 100,
+
+        # Sample only this many points for the lines in 3D.
+        'OBSTACLE_SUBSAMPLE_N': 100,
+
+        # Maximum line distance to consider
+        'MAX_LINE_DISTANCE': 2.0,
         
         # Threshold of the left line, in HLS, (min, max).
-        'THRESH_L': ( np.array([211/2, 15, 120]), np.array([249/2, 153, 255]) ),
+        'THRESH_L': THRESH_YELLOW_LINE,
 
-        # Threshold of the right line, in HLS, (min, max).
-        'THRESH_R': ( np.array([50/2, 15, 120]), np.array([70/2, 153, 255]) ),
+        # Function to threshold the right line.
+        'THRESH_R': THRESH_BLUE_LINE,
 
-        # Threshold of obstacles, in HLS, (min, max). TODO: change from red to purple
-        'THRESH_OBSTACLES': ( np.array([]), np.array([]) ),
+        # Threshold of obstacles, in HLS, (min, max).
+        'THRESH_OBSTACLES': THRESH_OBSTACLES,
 
         # Threshold of other cars, in HLS, (min, max). TODO: etc
-        'THRESH_CARS': ( np.array([]), np.array([]) )
+        'THRESH_CARS': ( np.array([]), np.array([]) ),
+
+        # Kernel for threshold cleaning (morphological open)
+        'THRESH_OPEN_KERNEL': np.ones((5,5)),
+
+        # Minimum y value (in camera space) for line points to register)
+        'MIN_LINES_Y': -0.2,
+
+        # Canny thresholds for side lines.
+        'LINE_CANNY_MIN': 90,
+        'LINE_CANNY_MAX': 130,
+
+        # Debug plots
+        'DEBUG': True
+        # 'DEBUG': False
     }
 
     def __init__(
@@ -64,10 +123,12 @@ class FrameInfo:
 
         # Get color image in HLS space (hue-lightness-saturation).
         self._hls = cv2.cvtColor(self._color, cv2.COLOR_BGR2HLS)
+        # self._hls = cv2.blur(self._hls, (5,5))
+        self._hls = cv2.medianBlur(self._hls, 7)
+        # self._gray = cv2.cvtColor(self._color, cv2.COLOR_BGR2GRAY)
 
         # Store the options.
         self.options = options
-        # self._depth_scale = options['DEPTH_SCALE']
 
         # Dimensions of the frames.
         H_c, W_c, K = self._color.shape
@@ -80,6 +141,30 @@ class FrameInfo:
         # Store the frame dimensions.
         self.frame_dims = (H_c, W_c)
 
+    
+    # @cachedproperty
+    # def line_edges(self):
+    #     """
+    #     Canny edges computed on saturation, used for refining masks for
+    #     the side lines.
+    #     """
+
+    #     mask = cv2.Canny(
+    #         self._hls[:, :, 2],
+    #         self.options['LINE_CANNY_MIN'],
+    #         self.options['LINE_CANNY_MAX']
+    #     )
+
+    #     kernel = np.ones((4,4), np.uint8)
+    #     mask = cv2.dilate(mask, kernel)
+
+    #     if self.options['DEBUG']:
+    #         # print('lol')
+    #         cv2.imshow('canny', mask)
+
+
+    #     return mask.ravel()
+
 
     @cachedproperty
     def line_l_mask(self):
@@ -87,8 +172,13 @@ class FrameInfo:
         Image mask for the left line.
         """
         
-        (low, high) = self.options['THRESH_L']
-        mask = cv2.inRange(self._hls, low, high)
+        mask = self.options['THRESH_L'](self._hls)
+        kernel = self.options['THRESH_OPEN_KERNEL']
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+        if self.options['DEBUG']:
+            cv2.imshow('left', mask)
+
         return mask.ravel()
 
 
@@ -98,8 +188,13 @@ class FrameInfo:
         Image mask for the right line.
         """
 
-        (low, high) = self.options['THRESH_R']
-        mask = cv2.inRange(self._hls, low, high)
+        mask = self.options['THRESH_R'](self._hls)
+        kernel = self.options['THRESH_OPEN_KERNEL']
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+        if self.options['DEBUG']:
+            cv2.imshow('right', mask)
+
         return mask.ravel()
 
 
@@ -109,8 +204,13 @@ class FrameInfo:
         Image mask for the obstacles.
         """
 
-        (low, high) = self.options['THRESH_OBSTACLES']
-        mask = cv2.inRange(self._hls, low, high)
+        mask = self.options['THRESH_OBSTACLES'](self._hls)
+        kernel = self.options['THRESH_OPEN_KERNEL']
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+        if self.options['DEBUG']:
+            cv2.imshow('obstacle', mask)
+
         return mask.ravel()
 
 
@@ -132,13 +232,9 @@ class FrameInfo:
         points with z < 0.3 (these should be removed after).
         """
 
-        # TODO: Reshape this to self.frame_dims (not sure what the correct
-        # order is, however.) OTOH might be better to reshape later
-
         pts = self._pointcloud.calculate(self._depth_frame)
         pts3d = np.asanyarray(pts.get_vertices())
         pts3d = pts3d.view(np.float32).reshape(pts3d.shape + (-1,))
-        # TODO: reshape here
         return pts3d
 
 
@@ -152,6 +248,54 @@ class FrameInfo:
         mask = self.pts3d[:, 2] > self.options['DEPTH_MINIMUM']
         return mask
 
+    
+    @cachedproperty
+    def local_object_vmask(self):
+        """
+        Validity mask for local objects (cars/obstacles).
+        """
+        # Only consider close points
+        return np.logical_and(
+            self.pts3d_vmask, 
+            self.pts3d[:,2] < self.options['MAX_LINE_DISTANCE']
+        )
+
+    
+    @cachedproperty
+    def ground_plane_pts_vmask(self):
+        """
+        Validity mask for points on the local ground plane.
+        """
+
+        # Only consider close points
+        mask = np.logical_and(
+            self.pts3d_vmask, 
+            self.pts3d[:,2] < self.options['MAX_LINE_DISTANCE']
+        )
+
+        # .. Also, only consider points 'below' the camera's x-z plane (y > THRESH)
+        mask = np.logical_and(
+            self.local_object_vmask, 
+            self.pts3d[:,1] > self.options['MIN_LINES_Y']
+        )
+
+        return mask
+
+    
+    @cachedproperty
+    def line_l_vmask(self):
+        return np.logical_and(self.line_l_mask, self.ground_plane_pts_vmask)
+
+
+    @cachedproperty
+    def line_r_vmask(self):
+        return np.logical_and(self.line_r_mask, self.ground_plane_pts_vmask)
+
+
+    @cachedproperty
+    def obstacle_vmask(self):
+        return np.logical_and(self.obstacle_mask, self.local_object_vmask)
+
 
     @cachedproperty
     def lines_vmask(self):
@@ -159,32 +303,62 @@ class FrameInfo:
         Validity mask for the lines.
         """
 
-        lines_mask = np.logical_or(self.line_l_mask, self.line_r_mask)
-        mask = np.logical_and(lines_mask, self.pts3d_vmask)
+        mask = np.logical_and(self.line_l_mask, self.line_r_mask)
+
+        if self.options['DEBUG']:
+            H,W = self.frame_dims
+            cv2.imshow('whew', 255*np.array(mask, dtype=np.uint8).reshape((H,W)))
+
         return mask
 
+
+    @cachedproperty
+    def line_l_pts(self):
+
+        return self.subsample_pts(
+            self.pts3d[self.line_l_vmask],
+            self.options['LINES_SUBSAMPLE_N']
+        )
+    
+
+    @cachedproperty
+    def line_r_pts(self):
+
+        return self.subsample_pts(
+            self.pts3d[self.line_r_vmask],
+            self.options['LINES_SUBSAMPLE_N']
+        )
+
+
+    @cachedproperty
+    def line_l_pts_plane(self):
+        return self.pts_camera_to_plane(self.line_l_pts)
+    
+
+    @cachedproperty
+    def line_r_pts_plane(self):
+        return self.pts_camera_to_plane(self.line_r_pts)
+    
 
     @cachedproperty
     def lines_pts(self):
         """
         Sampled points on the lines vmask.
         """
+        return np.vstack((self.line_l_pts, self.line_r_pts))
 
-        # Filter all 3D points by the lines validity mask.
-        pts = self.pts3d[self.lines_vmask]
 
-        # How many points should we sample?
-        n_to_sample = self.options['LINES_SUBSAMPLE_N']
+    @cachedproperty
+    def obstacle_pts(self):
 
-        # If we want to sample more points than we have,
-        # just return all the points - otherwise, randomly sample.
-        if n_to_sample >= pts.shape[0]:
-            return pts
-        else:
-            return pts[
-                np.random.choice(pts.shape[0], n_to_sample, replace=False),
-                :
-            ]
+        return self.subsample_pts(
+            self.pts3d[self.obstacle_vmask],
+            self.options['OBSTACLE_SUBSAMPLE_N'])
+
+
+    @cachedproperty
+    def obstacle_pts_plane(self):
+        return self.pts_camera_to_plane(self.obstacle_pts)
 
 
     @cachedproperty
@@ -313,3 +487,16 @@ class FrameInfo:
 
         # Return transformed points.
         return np.dot(self.Tcp, pts_homo)[:3, :].T
+
+    
+    def subsample_pts(self, pts, N):
+        """
+        Subsample at most N points from pts.
+        """
+
+        # If we want to sample more points than we have,
+        # just return all the points - otherwise, randomly sample.
+        if N >= pts.shape[0]:
+            return pts
+        else:
+            return pts[np.random.choice(pts.shape[0], N, replace=False), :]
