@@ -17,14 +17,18 @@ pipeline.start(config)
 
 plt.ion()
 fig, ax = plt.subplots()
-sc_l = ax.scatter([],[])
-sc_r = ax.scatter([],[])
-sc_obs = ax.scatter([],[])
+sc_l = ax.scatter([],[], s=10)
+sc_r = ax.scatter([],[], s=10)
+sc_obs = ax.scatter([],[], s=10)
 # ax.axis('equal')
 plt.xlim(-3, 3)
 plt.ylim(-3, 3)
 plt.grid(True)
 plt.draw()
+
+opts = FrameInfo.DEFAULT_OPTIONS.copy()
+opts['DEBUG'] = False
+
 
 # Capture frames for debugging
 while True:
@@ -34,12 +38,16 @@ while True:
     color_frame = frames.get_color_frame()
     if not depth_frame or not color_frame: continue
     
-    frinfo = FrameInfo(color_frame, depth_frame)
+    frinfo = FrameInfo(color_frame, depth_frame, options=opts)
+    if opts['GROUND_PLANE'] is None:
+        opts['GROUND_PLANE'] = frinfo.front_ground_plane
     # pts = frinfo.pts_camera_to_plane(frinfo.lines_pts)
+
+    # ym = frinfo.pts_ground_plane_mask
 
     tr = frinfo.obstacle_mask
     pts_l = frinfo.line_l_pts_plane
-    print(pts_l)
+    # print(pts_l)
     sc_l.set_offsets(np.c_[pts_l[:,0], pts_l[:,1]])
     pts_r = frinfo.line_r_pts_plane
     sc_r.set_offsets(np.c_[pts_r[:,0], pts_r[:,1]])

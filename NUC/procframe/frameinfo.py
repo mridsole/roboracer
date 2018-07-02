@@ -95,6 +95,13 @@ class FrameInfo:
         'LINE_CANNY_MIN': 90,
         'LINE_CANNY_MAX': 130,
 
+        # How far from the ground plane are line points allowed to be?
+        'GROUND_PLANE_HEIGHT_TOL': 0.05,
+
+        # Provide a ground plane to be used (instead of estimating
+        # based on lines). If none, one will be calculated from lines.
+        'GROUND_PLANE': None,
+
         # Debug plots
         'DEBUG': True
         # 'DEBUG': False
@@ -267,12 +274,6 @@ class FrameInfo:
         Validity mask for points on the local ground plane.
         """
 
-        # Only consider close points
-        mask = np.logical_and(
-            self.pts3d_vmask, 
-            self.pts3d[:,2] < self.options['MAX_LINE_DISTANCE']
-        )
-
         # .. Also, only consider points 'below' the camera's x-z plane (y > THRESH)
         mask = np.logical_and(
             self.local_object_vmask, 
@@ -332,12 +333,21 @@ class FrameInfo:
 
     @cachedproperty
     def line_l_pts_plane(self):
-        return self.pts_camera_to_plane(self.line_l_pts)
+
+        # A final filtering operation: only consider points that are
+        # within a certain distance of the plane.
+        pts_plane = self.pts_camera_to_plane(self.line_l_pts)
+
+        in_plane = np.abs(pts_plane[:,2]) < self.options['GROUND_PLANE_HEIGHT_TOL']
+        return pts_plane[in_plane, :]
     
 
     @cachedproperty
     def line_r_pts_plane(self):
-        return self.pts_camera_to_plane(self.line_r_pts)
+        pts_plane = self.pts_camera_to_plane(self.line_r_pts)
+
+        in_plane = np.abs(pts_plane[:,2]) < self.options['GROUND_PLANE_HEIGHT_TOL']
+        return pts_plane[in_plane, :]
     
 
     @cachedproperty
@@ -363,7 +373,7 @@ class FrameInfo:
 
     @cachedproperty
     def lines_pts_plane(self):
-        return self.pts_camera_to_plane(self.lines_pts)
+        return np.vstack((self.line_l_pts_plane, self.line_r_pts_plane))
 
 
     @cachedproperty
@@ -371,31 +381,73 @@ class FrameInfo:
         return self.lines_pts_plane[:, 0:2]
 
 
+    
+    @cachedproperty
+    def pts_ground_plane_mask(self):
+
+        mask = np.abs(self.pts_ground_plane_height) < \
+            self.options['GROUND_PLANE_HEIGHT_TOL']
+
+        if self.options['DEBUG']:
+            cv2.imshow('gpheight', 255*np.array(
+                mask.reshape(self.frame_dims), dtype=np.uint8
+            ))
+
+        return mask
+
+
     @cachedproperty
     def ground_pca(self):
         """
-        Scikit-learn PCA object for the ground plane estimation,
-        based on the left and right line points.
+        Scikit-learn PCA object for the ground plane estimation.
 
-        # If points are available, returns None.
+        This uses the points in the front bottom of the camera's view,
+        so it assumes the camera is somewhat pointing down at the ground.
         """
 
         # TODO: fit to pts3d, masked by valid LR points.
 
         # Mask by z validity.
-        pts = self.pts3d[self.pts3d_vmask]
+        # pts = self.pts3d[self.pts3d_vmask]
 
+        pts = self.lines_pts
         if pts.shape[0] < 10:
             return None
 
         # Subsample and compute PCA.
-        pts_subsampled = self.pts3d[
-            np.random.randint(pts.shape[0], size=200), :
-        ]
+        # pts_subsampled = self.pts3d[
+        #     np.random.randint(pts.shape[0], size=200), :
+        # ]
         pca = PCA(n_components=3)
-        pca.fit(pts_subsampled)
+        pca.fit(pts)
 
         return pca
+
+
+    @cachedproperty
+    def front_ground_plane(self):
+        """
+        A ground plane computed from the pixels immediately in front.
+        This is a bit of a hack, just using this for testing.
+        """
+
+        H, W = self.frame_dims
+        pts = self.pts3d.reshape(self.frame_dims + (3,))
+        pts = pts[
+            int((1/3) * H) : int((2/3) * H),
+            int((1/3) * W) : int((2/3) * W),
+        ]
+        pts = pts.reshape((pts.shape[0] * pts.shape[1], 3))
+        pts = self.subsample_pts(pts, 100)
+
+        if len(pts) < 5: return None
+
+        pca = PCA(n_components=3)
+        pca.fit(pts)
+        e3 = pca.components_[2]
+        n = np.sign(np.dot([0, -1, 0], e3)) * e3
+        k = -np.dot(n, pca.mean_)
+        return (n, k)
 
 
     @cachedproperty
@@ -403,30 +455,38 @@ class FrameInfo:
         """
         Ground plane in the camera's coordinate frame, as (n,k). Where:
             x . n = k
-        This uses the left and right line thresholds, and assumes that those
-        points should be on a plane. Just using least squares for now, maybe
-        RANSAC later if there are other points in the threshold.
-
-        If no ground plane is found, returns None.
+        This uses the points in the front bottom of the camera's view,
+        so it assumes the camera is somewhat pointing down at the ground.
         """
 
-        if self.ground_pca == None: return None
+        # If we were given a ground plane, use that.
+        if self.options['GROUND_PLANE'] is not None:
+            return self.options['GROUND_PLANE']
 
-        # Take the third component, e3, as the (up to direction reversal)
-        # normal of the ground plane.
-        pca = self.ground_pca
-        e3 = pca.components_[2]
 
-        # Compute the normal, ensuring that it points 'upwards' (roughly
-        # in the direction of the negative y axis)
-        n = np.sign(np.dot([0, -1, 0], e3)) * e3
+        # Just compute ground plane based on points immediately in front.
+        # This is a bit of a hack and shouldn't be used in realtime (just
+        # for calibration / getting the plane to begin with). The actual
+        # ground plane should be specified as a constant.
+        return self.front_ground_plane
 
-        # Compute the perpendicular distance to the plane, so that we have
-        # the plane in the form:
-        #   x . n = k
-        k = np.dot(n, pca.mean_)
+        # if self.ground_pca == None: return None
 
-        return (n, k)
+        # # Take the third component, e3, as the (up to direction reversal)
+        # # normal of the ground plane.
+        # pca = self.ground_pca
+        # e3 = pca.components_[2]
+
+        # # Compute the normal, ensuring that it points 'upwards' (roughly
+        # # in the direction of the negative y axis)
+        # n = np.sign(np.dot([0, -1, 0], e3)) * e3
+
+        # # Compute the perpendicular distance to the plane, so that we have
+        # # the plane in the form:
+        # #   x . n = k
+        # k = np.dot(n, pca.mean_)
+
+        # return (n, k)
 
 
     @cachedproperty
@@ -435,11 +495,14 @@ class FrameInfo:
         Homogeneous transformation from ground plane space to camera space.
         """
 
+        if self.ground_plane == None:
+            return np.eye(4)
+
         # Plane normal and k s.t.:  x . n = k
         n, k = self.ground_plane
 
         # Camera axes in camera frame:
-        x_c = np.array([1,0,0])
+        j_c = np.array([1,0,0])
         y_c = np.array([0,1,0])
         z_c = np.array([0,0,1])
 
@@ -454,7 +517,7 @@ class FrameInfo:
         t = k * n
 
         return np.vstack((
-            np.hstack((R, np.asmatrix(t).T)),
+            np.hstack((R, np.asarray([t]).T)),
             np.array([[0, 0, 0, 1]])
         ))
 
