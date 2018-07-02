@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+
+import pyrealsense2 as rs
+import numpy as np
+import cv2
+import click
+
+
+@click.command()
+@click.option(
+    '--display/--no-display', 
+    default=False,
+    help='Display while recording.'
+)
+@click.option(
+    '--filename',
+    required=True,
+    help='Filename for depth video output (should end in .bag).'
+)
+@click.option(
+    '--width',
+    default=848,
+    required=False,
+    type=int,
+    help='Recording width.'
+)
+@click.option(
+    '--height',
+    default=480,
+    required=False,
+    type=int,
+    help='Recording height.'
+)
+@click.option(
+    '--fps',
+    default=30,
+    required=False,
+    type=int,
+    help='Recording FPS.'
+)
+def rscapbag(display, filename, width, height, fps):
+    """
+    Capture and save depth and color streams from stereo camera.
+    Saves as a ROS bag.
+    """
+
+    if not filename.endswith('.bag'):
+        raise Exception('Output filename extension must be \'.bag\'.')
+
+    # TODO: Allow configurable resolution and FPS.
+    dims = (width, height)
+
+    # RealSense configuration.
+    config = rs.config()
+    config.enable_stream(rs.stream.depth, dims[0], dims[1], rs.format.z16, fps)
+    config.enable_stream(rs.stream.color, dims[0], dims[1], rs.format.bgr8, fps)
+
+    # Pipeline for frame capture.
+    pipeline = rs.pipeline()
+    profile = pipeline.start(config)
+
+    # Get device and construct a recorder (this starts recording).
+    device = profile.get_device()
+    recorder = rs.recorder(filename, device)
+
+    # Loop until Ctrl-C.
+    while True:
+        stop = input('Recording ...')
+        recorder.pause()
+        stop = input('Paused.')
+        recorder.resume()
+
+if __name__ == '__main__':
+    rscapbag()
