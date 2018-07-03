@@ -7,5 +7,6 @@ from procframe.trajectory import TrajectoryPlanner
 
 __all__ = [
     'FrameInfo',
+    'FrameObject',
     'TrajectoryPlanner'
 ]

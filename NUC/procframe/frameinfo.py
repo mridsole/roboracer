@@ -71,7 +71,7 @@ class FrameInfo:
         'OBSTACLE_SUBSAMPLE_N': 100,
 
         # Maximum line distance to consider
-        'MAX_LINE_DISTANCE': 2.0,
+        'MAX_LINE_DISTANCE': 2.2,
         
         # Threshold of the left line, in HLS, (min, max).
         'THRESH_L': THRESH_YELLOW_LINE,
@@ -87,6 +87,8 @@ class FrameInfo:
 
         # Kernel for threshold cleaning (morphological open)
         'THRESH_OPEN_KERNEL': np.ones((5,5)),
+
+        'OBS_ERODE_KERNEL': np.ones((25,25)),
 
         # Minimum y value (in camera space) for line points to register)
         'MIN_LINES_Y': -0.2,
@@ -212,8 +214,8 @@ class FrameInfo:
         """
 
         mask = self.options['THRESH_OBSTACLES'](self._hls)
-        kernel = self.options['THRESH_OPEN_KERNEL']
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        kernel = self.options['OBS_ERODE_KERNEL']
+        mask = cv2.morphologyEx(mask, cv2.MORPH_ERODE, kernel)
 
         if self.options['DEBUG']:
             cv2.imshow('obstacle', mask)

@@ -55,6 +55,8 @@ def rscapbag(display, filename, width, height, fps):
     config.enable_stream(rs.stream.depth, dims[0], dims[1], rs.format.z16, fps)
     config.enable_stream(rs.stream.color, dims[0], dims[1], rs.format.bgr8, fps)
 
+    # import IPython; IPython.embed()
+
     # Pipeline for frame capture.
     pipeline = rs.pipeline()
     profile = pipeline.start(config)
