@@ -1,6 +1,6 @@
 import pyrealsense2 as rs
 import numpy as np
-from procframe import FrameInfo, FrameObject
+from procframe import FrameInfo, FrameObjects
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle
@@ -15,12 +15,19 @@ MAX_FRAMES = None
 DIMS = (848, 480)
 FPS = 15
 
-# RealSense configuration.
-config = rs.config()
-config.enable_stream(rs.stream.depth, DIMS[0], DIMS[1], rs.format.z16, FPS)
-config.enable_stream(rs.stream.color, DIMS[0], DIMS[1], rs.format.bgr8, FPS)
+# # RealSense configuration.
+# config = rs.config()
+# config.enable_stream(rs.stream.depth, DIMS[0], DIMS[1], rs.format.z16, FPS)
+# config.enable_stream(rs.stream.color, DIMS[0], DIMS[1], rs.format.bgr8, FPS)
+# 
+# # Pipeline for frame capture.
+# pipeline = rs.pipeline()
+# pipeline.start(config)
 
-# Pipeline for frame capture.
+# Device setup.
+config = rs.config()
+config.enable_device_from_file('../data/hm1.bag')
+config.enable_all_streams()
 pipeline = rs.pipeline()
 pipeline.start(config)
 
@@ -41,6 +48,7 @@ opts['DEBUG'] = True
 
 
 # Capture frames for debugging
+circ = None
 while True:
 
     frames = pipeline.wait_for_frames()
@@ -53,11 +61,14 @@ while True:
         opts['GROUND_PLANE'] = frinfo.front_ground_plane
     # pts = frinfo.pts_camera_to_plane(frinfo.lines_pts)
 
-    frobj = FrameObject(frinfo)
+    frobj = FrameObjects(frinfo)
 
-    # ym = frinfo.pts_ground_plane_mask
+    [p.remove() for p in reversed(ax.patches)]
+
+    vm = frinfo.lines_vmask
 
     # Scatter points
+    pts_l = frinfo.line_l_pts_plane
     sc_l.set_offsets(np.c_[pts_l[:,0], pts_l[:,1]])
     pts_r = frinfo.line_r_pts_plane
     sc_r.set_offsets(np.c_[pts_r[:,0], pts_r[:,1]])
@@ -65,12 +76,11 @@ while True:
     sc_obs.set_offsets(np.c_[pts_obs[:,0], pts_obs[:,1]])
 
     # Plot obstacle circle
-    c, r = frobj.obstacle
-    patches = PatchCollection([
-        Circle((c[0], c[1]), r)
-    ])
+    if frobj.obstacle is not None:
+        c, r = frobj.obstacle
+        circ = Circle((c[0], c[1]), r)
+        ax.add_patch(circ)
 
-    ax.add_collection(patches)
     fig.canvas.draw_idle()
     plt.pause(0.001)
 

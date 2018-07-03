@@ -20,6 +20,7 @@ class FrameObjects:
     def __init__(self, frinfo, opts=DEFAULT_OPTIONS):
         
         self.frinfo = frinfo
+        self.options = opts
 
 
     @cachedproperty
@@ -56,7 +57,10 @@ class FrameObjects:
         pca.fit(pts)
 
         e1 = pca.components_[0]
-        r = pca.explained_variance_[0]
+        r = 4 * np.sqrt(pca.explained_variance_[0]) + 0.02
+        print(r)
+
+        # TODO: Manual outlier removal
         c = pca.mean_
 
         return (c, r)

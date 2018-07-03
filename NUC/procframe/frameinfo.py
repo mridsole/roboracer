@@ -74,10 +74,10 @@ class FrameInfo:
         'MAX_LINE_DISTANCE': 2.2,
         
         # Threshold of the left line, in HLS, (min, max).
-        'THRESH_L': THRESH_YELLOW_LINE,
+        'THRESH_L': THRESH_BLUE_LINE,
 
         # Function to threshold the right line.
-        'THRESH_R': THRESH_BLUE_LINE,
+        'THRESH_R': THRESH_YELLOW_LINE,
 
         # Threshold of obstacles, in HLS, (min, max).
         'THRESH_OBSTACLES': THRESH_OBSTACLES,
@@ -88,9 +88,11 @@ class FrameInfo:
         # Kernel for threshold cleaning (morphological open)
         'THRESH_OPEN_KERNEL': np.ones((5,5)),
 
-        'OBS_ERODE_KERNEL': np.ones((25,25)),
+        'OBS_CLOSE_KERNEL': cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(30,30)),
+        'OBS_ERODE_KERNEL': cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(40,40)),
 
         # Minimum y value (in camera space) for line points to register)
+        # TODO: deprecated
         'MIN_LINES_Y': -0.2,
 
         # Canny thresholds for side lines.
@@ -106,7 +108,6 @@ class FrameInfo:
 
         # Debug plots
         'DEBUG': True
-        # 'DEBUG': False
     }
 
     def __init__(
@@ -133,7 +134,7 @@ class FrameInfo:
         # Get color image in HLS space (hue-lightness-saturation).
         self._hls = cv2.cvtColor(self._color, cv2.COLOR_BGR2HLS)
         # self._hls = cv2.blur(self._hls, (5,5))
-        self._hls = cv2.medianBlur(self._hls, 7)
+        # self._hls = cv2.medianBlur(self._hls, 3)
         # self._gray = cv2.cvtColor(self._color, cv2.COLOR_BGR2GRAY)
 
         # Store the options.
@@ -214,8 +215,18 @@ class FrameInfo:
         """
 
         mask = self.options['THRESH_OBSTACLES'](self._hls)
-        kernel = self.options['OBS_ERODE_KERNEL']
-        mask = cv2.morphologyEx(mask, cv2.MORPH_ERODE, kernel)
+
+        mask = cv2.morphologyEx(
+            mask, 
+            cv2.MORPH_CLOSE, 
+            self.options['OBS_CLOSE_KERNEL']
+        )
+
+        mask = cv2.morphologyEx(
+            mask, 
+            cv2.MORPH_ERODE, 
+            self.options['OBS_ERODE_KERNEL']
+        )
 
         if self.options['DEBUG']:
             cv2.imshow('obstacle', mask)
@@ -273,16 +284,25 @@ class FrameInfo:
     @cachedproperty
     def ground_plane_pts_vmask(self):
         """
-        Validity mask for points on the local ground plane.
+        Validity mask for points on the local ground plane. Just take
+        the image-space region below the horizon for now ...
         """
 
-        # .. Also, only consider points 'below' the camera's x-z plane (y > THRESH)
-        mask = np.logical_and(
-            self.local_object_vmask, 
-            self.pts3d[:,1] > self.options['MIN_LINES_Y']
-        )
+        H, W = self.frame_dims
+        mask = np.ones(self.frame_dims)
+        mask[0:int(0.30 * H),:] = 0.
 
-        return mask
+        return mask.flatten()
+
+
+    @cachedproperty
+    def center_vmask(self):
+
+        H, W = self.frame_dims
+        vmask = np.ones(self.frame_dims)
+        vmask[:, :int(0.15*W)] = 0.
+        vmask[:, int(0.85*W):] = 0.
+        return vmask.flatten()
 
     
     @cachedproperty
@@ -292,12 +312,23 @@ class FrameInfo:
 
     @cachedproperty
     def line_r_vmask(self):
-        return np.logical_and(self.line_r_mask, self.ground_plane_pts_vmask)
+
+        mask = np.logical_and(self.line_r_mask, self.ground_plane_pts_vmask)
+
+        if self.options['DEBUG']:
+            H,W = self.frame_dims
+            cv2.imshow('r_vmask', 255*np.array(mask, dtype=np.uint8).reshape((H,W)))
+
+        return mask
+
 
 
     @cachedproperty
     def obstacle_vmask(self):
-        return np.logical_and(self.obstacle_mask, self.local_object_vmask)
+        mask = np.logical_and(self.obstacle_mask, self.local_object_vmask)
+        mask = np.logical_and(mask, self.center_vmask)
+        mask = np.logical_and(mask, self.ground_plane_pts_vmask)
+        return mask
 
 
     @cachedproperty
@@ -306,7 +337,7 @@ class FrameInfo:
         Validity mask for the lines.
         """
 
-        mask = np.logical_and(self.line_l_mask, self.line_r_mask)
+        mask = np.logical_or(self.line_l_mask, self.line_r_mask)
 
         if self.options['DEBUG']:
             H,W = self.frame_dims
