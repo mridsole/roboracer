@@ -47,12 +47,11 @@ Servo BL;
 Servo BR;
 
 /* Wheel Velocity Pins */
-float FLVel = 0;
-float FRVel = 0;
-float BLVel = 0;
-float BRVel = 0;
-unsigned long prevTime = 0;
-unsigned long prevWheelCheckTime = 0;
+unsigned long FLTimeDiff = 0;
+unsigned long FRTimeDiff = 0;
+unsigned long BLTimeDiff = 0;
+unsigned long BRTimeDiff = 0;
+unsigned long prevWheelCheckTime;
 unsigned long currTime = 0;
 unsigned int frontLeftCountPrev = 0;
 unsigned int frontRightCountPrev = 0;
@@ -75,6 +74,7 @@ void setup() {
   Serial.setTimeout(5);
 
   previousTime = millis();
+  prevWheelCheckTime = millis();  
 
   /* Setup Servos (Wheels) */
   FL.attach(9);
@@ -88,8 +88,6 @@ void setup() {
   enableInterrupt(6, backLeftChange,CHANGE);
   enableInterrupt(7, backRightChange,CHANGE);
 
-  prevTime = millis();
-  prevWheelCheckTime = millis();  
 
 }
 
@@ -99,28 +97,74 @@ volatile unsigned int frontLeftCount = 0;
 volatile unsigned int frontRightCount = 0;
 volatile unsigned int backLeftCount = 0;
 volatile unsigned int backRightCount = 0;
+/* ^ technically dont dont need these anymore but should keep just in case */
+
+/* Variables to track time and speed of wheels*/
+volatile unsigned long currTimeFL= millis();
+volatile unsigned long currTimeFR= millis();
+volatile unsigned long currTimeBL= millis();
+volatile unsigned long currTimeBR= millis();
+volatile unsigned long prevTimeFL = 0;
+volatile unsigned long prevTimeFR = 0;
+volatile unsigned long prevTimeBL = 0;
+volatile unsigned long prevTimeBR = 0;
+volatile unsigned int FLread = 0;
+volatile unsigned int FRread = 0;
+volatile unsigned int BLread = 0;
+volatile unsigned int BRread = 0;
+
+
 /* Read rising edges */
 void frontLeftChange(){
-  if(bitRead(PORTD, 4) == 0){
-      frontLeftCount++;
+  if(bitRead(PIND, 4) == 0){
+      if (FLread == 0){
+        prevTimeFL = currTimeFL;
+        currTimeFL = millis();
+        frontLeftCount++;
+
+        // FLread = 1;
+      }else{
+         FLread = 0;
+      }
   }
 }
 
 void frontRightChange(){
-  if(bitRead(PORTD, 5) == 0){
-      frontRightCount++;
+  if(bitRead(PIND, 5) == 0){
+      if (FRread == 0){
+        prevTimeFR = currTimeFR;
+        currTimeFR = millis();
+        frontRightCount++;
+        //FRread = 1;
+      }else{
+        FRread = 0;
+      }
   }
 }
 
 void backLeftChange(){
-  if(bitRead(PORTD, 6) == 0){
-      backLeftCount++;
+  if(bitRead(PIND, 6) == 0){
+      if (BLread == 0){
+        prevTimeBL = currTimeBL;
+        currTimeBL = millis();
+        backLeftCount++;
+        //BLread = 1;
+      } else {
+        BLread = 0;
+      }
   }
 }
 
 void backRightChange(){
-  if(bitRead(PORTD, 7) == 0){
-      backRightCount++;
+  if(bitRead(PIND, 7) == 0){
+      if (BRread == 0){
+        prevTimeBR = currTimeBR;
+        currTimeBR = millis();
+        backRightCount++;
+        //BRread = 1;
+      } else {
+        BRread = 0;
+     }
   }
 }
 
@@ -145,38 +189,47 @@ void loop() {
   
   /* Calculate Velocities of wheels every 0.3 seconds*/
   if (currTime - prevWheelCheckTime > 300){
-    frontLeftCountNow = frontLeftCount;
-    frontRightCountNow = frontRightCount;
-    backLeftCountNow = backLeftCount;
-    backRightCountNow = backRightCount;
-  
-    float FLRad = 2*PI*(frontLeftCountNow-frontLeftCountPrev);
-    float FRRad = 2*PI*(frontRightCountNow-frontRightCountPrev);
-    float BLRad = 2*PI*(backLeftCountNow-backLeftCountPrev);
-    float BRRad = 2*PI*(backRightCountNow-backRightCountPrev);
+//    frontLeftCountNow = frontLeftCount;
+//    frontRightCountNow = frontRightCount;
+//    backLeftCountNow = backLeftCount;
+//    backRightCountNow = backRightCount;
+//    Serial.print(frontLeftCount);
+//    Serial.print(",");
+//    Serial.print(frontRightCount);
+//    Serial.print(",");
+//    Serial.print(backLeftCount);
+//    Serial.print(",");
+//    Serial.print(backRightCount);
+//    Serial.print("\n\r");
+
+    FLTimeDiff = currTimeFL-prevTimeFL;
+    FRTimeDiff = currTimeFR-prevTimeFR;
+    BLTimeDiff = currTimeBL-prevTimeBL;
+    BRTimeDiff = currTimeBR-prevTimeBR;
     
-    FLVel = FLRad/(((float)(currTime-prevTime))/1000);
-    FRVel = FRRad/(((float)(currTime-prevTime))/1000);
-    BLVel = BLRad/(((float)(currTime-prevTime))/1000);
-    BRVel = BRRad/(((float)(currTime-prevTime))/1000);
-    
-    frontLeftCountPrev = frontLeftCountNow;
-    frontRightCountPrev = frontRightCountNow;
-    backLeftCountPrev = backLeftCountNow;
-    backRightCountPrev = backRightCountNow;
-  
-    Serial.print(FLVel);
+//    frontLeftCountPrev = frontLeftCountNow;
+//    frontRightCountPrev = frontRightCountNow;
+//    backLeftCountPrev = backLeftCountNow;
+//    backRightCountPrev = backRightCountNow;
+
+//        Serial.print(currTimeFL);
+//        Serial.print(',');
+//        Serial.print(prevTimeFL);
+//        Serial.print('\n');
+//        
+
+    Serial.print(FLTimeDiff);
     Serial.print(",");
-    Serial.print(FRVel);
+    Serial.print(FRTimeDiff);
     Serial.print(",");
-    Serial.print(BLVel);
+    Serial.print(BLTimeDiff);
     Serial.print(",");
-    Serial.print(BRVel);
+    Serial.print(BRTimeDiff);
     Serial.print("\n\r");
+
     prevWheelCheckTime = currTime;
   }
 
-  prevTime = currTime;
 
   /* First check if there has been a timeout */
   if(millis()-previousTime > TIMEOUT){
