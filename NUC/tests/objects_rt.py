@@ -3,7 +3,7 @@ import numpy as np
 from procframe import FrameInfo, FrameObjects
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.patches import Circle
+from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.collections import PatchCollection
 import cv2
 import IPython
@@ -26,7 +26,7 @@ FPS = 15
 
 # Device setup.
 config = rs.config()
-config.enable_device_from_file('../data/hm1.bag')
+config.enable_device_from_file('../data/real2.bag')
 config.enable_all_streams()
 pipeline = rs.pipeline()
 pipeline.start(config)
@@ -34,12 +34,12 @@ pipeline.start(config)
 
 plt.ion()
 fig, ax = plt.subplots()
-sc_l = ax.scatter([],[], s=10)
-sc_r = ax.scatter([],[], s=10)
+sc_l = ax.scatter([],[], s=10, color=(0., 0., 0.9))
+sc_r = ax.scatter([],[], s=10, color=(0.8, 0.8, 0))
 sc_obs = ax.scatter([],[], s=10)
 # ax.axis('equal')
 plt.xlim(-3, 3)
-plt.ylim(-3, 3)
+plt.ylim(-1, 5)
 plt.grid(True)
 plt.draw()
 
@@ -49,6 +49,8 @@ opts['DEBUG'] = True
 
 # Capture frames for debugging
 circ = None
+line_l = None
+line_r = None
 while True:
 
     frames = pipeline.wait_for_frames()
@@ -67,6 +69,15 @@ while True:
 
     vm = frinfo.lines_vmask
 
+    if line_l is not None: 
+        w = line_l.pop(0)
+        if w is not None: w.remove()
+        line_l = None
+    if line_r is not None: 
+        w = line_r.pop(0)
+        if w is not None: w.remove()
+        line_r = None
+
     # Scatter points
     pts_l = frinfo.line_l_pts_plane
     sc_l.set_offsets(np.c_[pts_l[:,0], pts_l[:,1]])
@@ -78,8 +89,26 @@ while True:
     # Plot obstacle circle
     if frobj.obstacle is not None:
         c, r = frobj.obstacle
-        circ = Circle((c[0], c[1]), r)
+        circ = Circle((c[0], c[1]), r, color=(0.5,0,0.5))
         ax.add_patch(circ)
+
+    # Plot left line
+    if frobj.left_line:
+        n, k = frobj.left_line
+        p1 = k * n
+        v = np.array([n[1], -n[0]])
+        p2 = p1 + 3*v
+
+        # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
+        line_l = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
+
+    if frobj.right_line:
+        n, k = frobj.right_line
+        p1 = k * n
+        v = np.array([-n[1], n[0]])
+        p2 = p1 + 3*v
+        ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
+        line_r = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
 
     fig.canvas.draw_idle()
     plt.pause(0.001)

@@ -9,12 +9,12 @@ class FrameObjects:
     DEFAULT_OPTIONS = {
 
         # Minimum points on a line to be detected as a line.
-        'MIN_LINE_POINTS': 10,
+        'MIN_LINE_POINTS': 20,
 
         # TODO: min line variance explained (PCA)
 
         # Minimum points on an obstacle to be detected.
-        'MIN_OBSTACLE_POINTS': 15,
+        'MIN_OBSTACLE_POINTS': 30,
     }
 
     def __init__(self, frinfo, opts=DEFAULT_OPTIONS):
@@ -58,7 +58,7 @@ class FrameObjects:
 
         e1 = pca.components_[0]
         r = 4 * np.sqrt(pca.explained_variance_[0]) + 0.02
-        print(r)
+        # print(r)
 
         # TODO: Manual outlier removal
         c = pca.mean_

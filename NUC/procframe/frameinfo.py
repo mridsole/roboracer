@@ -61,6 +61,8 @@ class FrameInfo:
 
     DEFAULT_OPTIONS = {
 
+        'DEPTH_SCALE': 0.001,
+
         # Minimum z distance of the depth buffer (below which values are invalid).
         'DEPTH_MINIMUM': 0.3,
 
@@ -71,7 +73,9 @@ class FrameInfo:
         'OBSTACLE_SUBSAMPLE_N': 100,
 
         # Maximum line distance to consider
-        'MAX_LINE_DISTANCE': 2.2,
+        # TODO: we should be able to increase this once we don't
+        # have to deal with the lockers
+        'MAX_LINE_DISTANCE': 3.1,
         
         # Threshold of the left line, in HLS, (min, max).
         'THRESH_L': THRESH_BLUE_LINE,
@@ -86,7 +90,7 @@ class FrameInfo:
         'THRESH_CARS': ( np.array([]), np.array([]) ),
 
         # Kernel for threshold cleaning (morphological open)
-        'THRESH_OPEN_KERNEL': np.ones((5,5)),
+        'THRESH_OPEN_KERNEL': np.ones((3,3)),
 
         'OBS_CLOSE_KERNEL': cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(30,30)),
         'OBS_ERODE_KERNEL': cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(40,40)),
@@ -169,7 +173,6 @@ class FrameInfo:
     #     mask = cv2.dilate(mask, kernel)
 
     #     if self.options['DEBUG']:
-    #         # print('lol')
     #         cv2.imshow('canny', mask)
 
 
@@ -280,6 +283,12 @@ class FrameInfo:
             self.pts3d[:,2] < self.options['MAX_LINE_DISTANCE']
         )
 
+        # return np.logical_and(
+        #     self.pts3d_vmask,
+        #     self._depth.flatten() * self.options['DEPTH_SCALE'] < \
+        #         self.options['MAX_LINE_DISTANCE']
+        # )
+
     
     @cachedproperty
     def ground_plane_pts_vmask(self):
@@ -290,9 +299,11 @@ class FrameInfo:
 
         H, W = self.frame_dims
         mask = np.ones(self.frame_dims)
-        mask[0:int(0.30 * H),:] = 0.
-
+        mask[0:int(0.43 * H),:] = 0.
         return mask.flatten()
+        # mask = np.logical_and(mask.flatten(), self.local_object_vmask)
+
+        return mask
 
 
     @cachedproperty
@@ -337,7 +348,7 @@ class FrameInfo:
         Validity mask for the lines.
         """
 
-        mask = np.logical_or(self.line_l_mask, self.line_r_mask)
+        mask = np.logical_or(self.line_l_vmask, self.line_r_vmask)
 
         if self.options['DEBUG']:
             H,W = self.frame_dims
