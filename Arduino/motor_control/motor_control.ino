@@ -9,7 +9,7 @@
 /* -- Includes -- */
 #include <Servo.h>
 #include <EnableInterrupt.h>
- 
+
 /* -- Defined Constants -- */
 #define MAX_LEN 20
 #define WHEEL_RADIUS 0.060
@@ -22,6 +22,7 @@
 #define MAX_RAD_PER_S 30.8923
 #define MAX_SERVO 500*CONTROL_RATIO + 1000
 #define MIN_SERVO 1000
+
 
  /* -- Serial input info -- */
 uint8_t incomingByte = 0;
@@ -51,6 +52,7 @@ float FRVel = 0;
 float BLVel = 0;
 float BRVel = 0;
 unsigned long prevTime = 0;
+unsigned long prevWheelCheckTime = 0;
 unsigned long currTime = 0;
 unsigned int frontLeftCountPrev = 0;
 unsigned int frontRightCountPrev = 0;
@@ -60,6 +62,7 @@ unsigned int frontLeftCountNow = 0;
 unsigned int frontRightCountNow = 0;
 unsigned int backLeftCountNow = 0;
 unsigned int backRightCountNow = 0;
+
 
 /**
 * @brief Setup
@@ -86,6 +89,7 @@ void setup() {
   enableInterrupt(7, backRightChange,CHANGE);
 
   prevTime = millis();
+  prevWheelCheckTime = millis();  
 
 }
 
@@ -136,38 +140,44 @@ void loop() {
 //  Serial.print(",");
 //  Serial.print(backRightCount);
 //  Serial.print("\n\r");
-  /* Calculate Velocities of wheels */
   currTime = millis();
-  frontLeftCountNow = frontLeftCount;
-  frontRightCountNow = frontRightCount;
-  backLeftCountNow = backLeftCount;
-  backRightCountNow = backRightCount;
 
-  float FLRad = 2*PI*(frontLeftCountNow-frontLeftCountPrev);
-  float FRRad = 2*PI*(frontRightCountNow-frontRightCountPrev);
-  float BLRad = 2*PI*(backLeftCountNow-backLeftCountPrev);
-  float BRRad = 2*PI*(backRightCountNow-backRightCountPrev);
   
-  FLVel = FLRad/(((float)(currTime-prevTime))/1000);
-  FRVel = FRRad/(((float)(currTime-prevTime))/1000);
-  BLVel = BLRad/(((float)(currTime-prevTime))/1000);
-  BRVel = BRRad/(((float)(currTime-prevTime))/1000);
+  /* Calculate Velocities of wheels every 0.3 seconds*/
+  if (currTime - prevWheelCheckTime > 300){
+    frontLeftCountNow = frontLeftCount;
+    frontRightCountNow = frontRightCount;
+    backLeftCountNow = backLeftCount;
+    backRightCountNow = backRightCount;
   
-  frontLeftCountPrev = frontLeftCountNow;
-  frontRightCountPrev = frontRightCountNow;
-  backLeftCountPrev = backLeftCountNow;
-  backRightCountPrev = backRightCountNow;
+    float FLRad = 2*PI*(frontLeftCountNow-frontLeftCountPrev);
+    float FRRad = 2*PI*(frontRightCountNow-frontRightCountPrev);
+    float BLRad = 2*PI*(backLeftCountNow-backLeftCountPrev);
+    float BRRad = 2*PI*(backRightCountNow-backRightCountPrev);
+    
+    FLVel = FLRad/(((float)(currTime-prevTime))/1000);
+    FRVel = FRRad/(((float)(currTime-prevTime))/1000);
+    BLVel = BLRad/(((float)(currTime-prevTime))/1000);
+    BRVel = BRRad/(((float)(currTime-prevTime))/1000);
+    
+    frontLeftCountPrev = frontLeftCountNow;
+    frontRightCountPrev = frontRightCountNow;
+    backLeftCountPrev = backLeftCountNow;
+    backRightCountPrev = backRightCountNow;
+  
+    Serial.print(FLVel);
+    Serial.print(",");
+    Serial.print(FRVel);
+    Serial.print(",");
+    Serial.print(BLVel);
+    Serial.print(",");
+    Serial.print(BRVel);
+    Serial.print("\n\r");
+    prevWheelCheckTime = currTime;
+  }
+
   prevTime = currTime;
 
-  Serial.print(FLVel);
-  Serial.print(",");
-  Serial.print(FRVel);
-  Serial.print(",");
-  Serial.print(BLVel);
-  Serial.print(",");
-  Serial.print(BRVel);
-  Serial.print("\n\r");
-//  
   /* First check if there has been a timeout */
   if(millis()-previousTime > TIMEOUT){
     disable(); 
