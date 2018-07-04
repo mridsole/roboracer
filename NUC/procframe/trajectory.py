@@ -7,15 +7,14 @@ class Trajectory:
     Use a FrameInfo object to plan a local trajectory.
     """
 
-    SLOW_SPEED = 0.9
-    FAST_SPEED = 1.2
-    NO_LINE_SPEED = 1.0
+    SLOW_SPEED = 1.0
+    FAST_SPEED = 1.4
 
     LINE_DESIRED_DIST = 0.4
 
-    R_MIN = 0.5
+    R_MIN = 0.1
 
-    CURVE_WEIGHT = 6
+    CURVE_WEIGHT = 1.5
 
     def __init__(self, frameobjects):
         """
@@ -28,16 +27,22 @@ class Trajectory:
     @cachedproperty
     def immediate_path(self):
 
+        if self.frameobjects.target_line is None:
+            # If we have no line, just go forward.
+            return (1000., Trajectory.SLOW_SPEED) 
+
         v, xint = self.frameobjects.target_line
         n, k = self.frameobjects.target_line_nk
 
         # Project the origin onto the target line and move upwards
-        z = k * n + 1.2 * v
+        z = k * n + 0.4 * v
         z = z / np.linalg.norm(z)
 
-        fact = self.CURVE_WEIGHT * np.cross(z, [0,1])#  * np.sign(n.dot([0,1]))
+        # fact = self.CURVE_WEIGHT * np.arccos(np.dot(z, [0,1])) * np.sign(n.dot([0,1]))
+        # fact = self.CURVE_WEIGHT * np.cross(z, [0,1])# * np.sign(n.dot([0,1]))
+        fact = Trajectory.CURVE_WEIGHT * v.dot([1,0])
         print(fact)
-        r = (1 / (fact + 1e-4)) * Trajectory.R_MIN
+        r = (1 / (fact + 2e-4)) * Trajectory.R_MIN
 
         v = Trajectory.SLOW_SPEED
 

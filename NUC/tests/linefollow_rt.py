@@ -9,6 +9,12 @@ from motors import MotorHAL
 import cv2
 import time
 
+
+# Initialize the motor HAL
+mhal = MotorHAL()
+
+input('Enter to start: ')
+
 DIMS = (848, 480)
 FPS = 15
 
@@ -21,14 +27,9 @@ config.enable_stream(rs.stream.color, DIMS[0], DIMS[1], rs.format.bgr8, FPS)
 pipeline = rs.pipeline()
 pipeline.start(config)
 
-# Initialize the motor HAL
-mhal = MotorHAL()
-
 # No debug.
 opts = FrameInfo.DEFAULT_OPTIONS.copy()
 opts['DEBUG'] = False
-
-input('Enter to start: ')
 
 i = 0
 

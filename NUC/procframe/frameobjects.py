@@ -133,8 +133,12 @@ class FrameObjects:
 
         v, xint = self.target_line
         n = np.array([-v[1], v[0]])
+        # Make sure n is always outwards pointing ...
         k = n.dot(xint)
-        return (n, k)
+        if k < 0: 
+            return (-n, -k)
+        else:
+            return (n, k)
 
 
     @cachedproperty
