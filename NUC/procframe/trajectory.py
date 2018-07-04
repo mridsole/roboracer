@@ -7,11 +7,15 @@ class Trajectory:
     Use a FrameInfo object to plan a local trajectory.
     """
 
+    SLOW_SPEED = 0.9
+    FAST_SPEED = 1.2
     NO_LINE_SPEED = 1.0
 
     LINE_DESIRED_DIST = 0.4
 
     R_MIN = 0.5
+
+    CURVE_WEIGHT = 7
 
     def __init__(self, frameobjects):
         """
@@ -38,14 +42,14 @@ class Trajectory:
 
         # If we have no lines to work with, just try to go forward (slowly)
         if line is None:
-            return (1000, Trajectory.NO_LINE_SPEED)
+            return (1000, Trajectory.SLOW_SPEED)
 
         # Extract normal and k (how close the line is).
         n, k = line
 
         # Positive => turn away from line.
         # Negative => turn toward line.
-        fact = n.dot([0,1])
+        fact = CURVE_WEIGHT * n.dot([0,1])
         
         r = (1 / (fact + 1e-4)) * Trajectory.R_MIN
 
@@ -54,6 +58,6 @@ class Trajectory:
         if line_right: r = -r
 
         # TODO: dynamic speed choice, just go slow for now
-        v = Trajectory.NO_LINE_SPEED
+        v = Trajectory.SLOW_SPEED
 
         return (r, v)

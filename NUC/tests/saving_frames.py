@@ -7,7 +7,6 @@ from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.collections import PatchCollection
 import cv2
 import IPython
-import h5py
 
 # Testing FrameInfo
 
@@ -48,6 +47,7 @@ plt.draw()
 opts = FrameInfo.DEFAULT_OPTIONS.copy()
 opts['DEBUG'] = True
 
+save_idx = 0
 
 # Capture frames for debugging
 circ = None
@@ -115,10 +115,19 @@ while True:
     fig.canvas.draw_idle()
     plt.pause(0.001)
 
-    cv2.imshow('color', np.asanyarray(color_frame.get_data()))
-    cv2.imshow('deptth', cv2.applyColorMap(
-        cv2.convertScaleAbs(np.asanyarray(depth_frame.get_data()), alpha=0.03), 
-        cv2.COLORMAP_JET
-    ))
+    # save = input('Save frame? y/n [n]: ')
+    # if save == 'y':
+
+    np.save('../framedata/l_' + str(save_idx) + '.npy', frinfo.line_l_pts_plane)
+    np.save('../framedata/r_' + str(save_idx) + '.npy', frinfo.line_r_pts_plane)
+    np.save('../framedata/obs_' + str(save_idx) + '.npy', frinfo.obstacle_pts_plane) 
+    save_idx += 1
+
+
+    # cv2.imshow('color', np.asanyarray(color_frame.get_data()))
+    # cv2.imshow('deptth', cv2.applyColorMap(
+    #     cv2.convertScaleAbs(np.asanyarray(depth_frame.get_data()), alpha=0.03), 
+    #     cv2.COLORMAP_JET
+    # ))
 
     cv2.waitKey(1)
