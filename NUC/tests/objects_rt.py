@@ -7,7 +7,6 @@ from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.collections import PatchCollection
 import cv2
 import IPython
-import h5py
 
 # Testing FrameInfo
 
@@ -53,6 +52,7 @@ opts['DEBUG'] = True
 circ = None
 line_l = None
 line_r = None
+line_target = None
 while True:
 
     frames = pipeline.wait_for_frames()
@@ -79,6 +79,10 @@ while True:
         w = line_r.pop(0)
         if w is not None: w.remove()
         line_r = None
+    if line_target is not None: 
+        w = line_target.pop(0)
+        if w is not None: w.remove()
+        line_target = None
 
     # Scatter points
     pts_l = frinfo.line_l_pts_plane
@@ -109,8 +113,15 @@ while True:
         p1 = k * n
         v = np.array([-n[1], n[0]])
         p2 = p1 + 3*v
-        ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
+        # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
         line_r = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
+
+    if frobj.target_line:
+        v, xint = frobj.target_line
+        p1 = xint
+        p2 = xint + 5 * v
+        # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
+        line_target = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
 
     fig.canvas.draw_idle()
     plt.pause(0.001)
