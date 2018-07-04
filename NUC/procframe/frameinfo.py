@@ -75,7 +75,7 @@ class FrameInfo:
         # Maximum line distance to consider
         # TODO: we should be able to increase this once we don't
         # have to deal with the lockers
-        'MAX_LINE_DISTANCE': 3.1,
+        'MAX_LINE_DISTANCE': 3.2,
         
         # Threshold of the left line, in HLS, (min, max).
         'THRESH_L': THRESH_BLUE_LINE,
@@ -299,7 +299,7 @@ class FrameInfo:
 
         H, W = self.frame_dims
         mask = np.ones(self.frame_dims)
-        mask[0:int(0.43 * H),:] = 0.
+        mask[0:int(0.32 * H),:] = 0.
         return mask.flatten()
         # mask = np.logical_and(mask.flatten(), self.local_object_vmask)
 

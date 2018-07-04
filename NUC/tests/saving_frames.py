@@ -1,15 +1,17 @@
 import pyrealsense2 as rs
 import numpy as np
-from procframe import FrameInfo, FrameObjects, Trajectory
+from procframe import FrameInfo, FrameObjects
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.collections import PatchCollection
 import cv2
-import time
 import IPython
 
+# Testing FrameInfo
 
+# Record at most one minute of data.
+MAX_FRAMES = None
 DIMS = (848, 480)
 FPS = 15
 
@@ -29,6 +31,7 @@ config.enable_all_streams()
 pipeline = rs.pipeline()
 pipeline.start(config)
 
+# Export the points as well.
 
 plt.ion()
 fig, ax = plt.subplots()
@@ -44,12 +47,12 @@ plt.draw()
 opts = FrameInfo.DEFAULT_OPTIONS.copy()
 opts['DEBUG'] = True
 
+save_idx = 0
 
 # Capture frames for debugging
 circ = None
 line_l = None
 line_r = None
-line_target = None
 while True:
 
     frames = pipeline.wait_for_frames()
@@ -58,22 +61,16 @@ while True:
     if not depth_frame or not color_frame: continue
     
     frinfo = FrameInfo(color_frame, depth_frame, options=opts)
-
-    # TODO: we need to permanently store this ground plane transformation.
     if opts['GROUND_PLANE'] is None:
         opts['GROUND_PLANE'] = frinfo.front_ground_plane
     # pts = frinfo.pts_camera_to_plane(frinfo.lines_pts)
 
     frobj = FrameObjects(frinfo)
-    traj = Trajectory(frobj)
-
-    print(traj.immediate_path)
 
     [p.remove() for p in reversed(ax.patches)]
 
     vm = frinfo.lines_vmask
 
-    # Plotting stuff
     if line_l is not None: 
         w = line_l.pop(0)
         if w is not None: w.remove()
@@ -82,10 +79,6 @@ while True:
         w = line_r.pop(0)
         if w is not None: w.remove()
         line_r = None
-    if line_target is not None: 
-        w = line_target.pop(0)
-        if w is not None: w.remove()
-        line_target = None
 
     # Scatter points
     pts_l = frinfo.line_l_pts_plane
@@ -111,7 +104,6 @@ while True:
         # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
         line_l = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
 
-    # Plot right line
     if frobj.right_line:
         n, k = frobj.right_line
         p1 = k * n
@@ -120,24 +112,22 @@ while True:
         ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
         line_r = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
 
-    if frobj.target_line_nk:
-        n, k = frobj.target_line_nk
-        p1 = k * n
-        v = np.array([n[1], -n[0]])
-        p2 = p1 + 3*v
-        # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
-        line_target = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
-
-    # Draw plot
     fig.canvas.draw_idle()
     plt.pause(0.001)
 
-    # time.sleep(1.0)
+    # save = input('Save frame? y/n [n]: ')
+    # if save == 'y':
 
-    cv2.imshow('color', np.asanyarray(color_frame.get_data()))
-    cv2.imshow('deptth', cv2.applyColorMap(
-        cv2.convertScaleAbs(np.asanyarray(depth_frame.get_data()), alpha=0.03), 
-        cv2.COLORMAP_JET
-    ))
+    np.save('../framedata/l_' + str(save_idx) + '.npy', frinfo.line_l_pts_plane)
+    np.save('../framedata/r_' + str(save_idx) + '.npy', frinfo.line_r_pts_plane)
+    np.save('../framedata/obs_' + str(save_idx) + '.npy', frinfo.obstacle_pts_plane) 
+    save_idx += 1
+
+
+    # cv2.imshow('color', np.asanyarray(color_frame.get_data()))
+    # cv2.imshow('deptth', cv2.applyColorMap(
+    #     cv2.convertScaleAbs(np.asanyarray(depth_frame.get_data()), alpha=0.03), 
+    #     cv2.COLORMAP_JET
+    # ))
 
     cv2.waitKey(1)
