@@ -86,8 +86,6 @@ void setup() {
   enableInterrupt(5, frontRightChange,CHANGE);
   enableInterrupt(6, backLeftChange,CHANGE);
   enableInterrupt(7, backRightChange,CHANGE);
-
-
 }
 
 
@@ -106,7 +104,6 @@ volatile unsigned long prevTimeFL = 0;
 volatile unsigned long prevTimeFR = 0;
 volatile unsigned long prevTimeBL = 0;
 volatile unsigned long prevTimeBR = 0;
-
 
 /* Read rising edges */
 void frontLeftChange(){
@@ -130,7 +127,6 @@ void backLeftChange(){
      prevTimeBL = currTimeBL;
      currTimeBL = millis();
      backLeftCount++;
-
   }
 }
 
@@ -139,7 +135,6 @@ void backRightChange(){
      prevTimeBR = currTimeBR;
      currTimeBR = millis();
      backRightCount++;
-
   }
 }
 
@@ -163,46 +158,49 @@ void loop() {
 
   /* Calculate Velocities of wheels every 0.3 seconds*/
   if (currTime - prevWheelCheckTime > 300){
+    frontLeftCountPrev = frontLeftCountNow;
+    frontRightCountPrev = frontRightCountNow;
+    backLeftCountPrev = backLeftCountNow;
+    backRightCountPrev = backRightCountNow;
+    
+    frontLeftCountNow = frontLeftCount;
+    frontRightCountNow = frontRightCount;
+    backLeftCountNow = backLeftCount;
+    backRightCountNow = backRightCount;
 
     /* Calculates the time taken between each rotation */
-    FLTimeDiff = currTimeFL-prevTimeFL;
-    FRTimeDiff = currTimeFR-prevTimeFR;
-    BLTimeDiff = currTimeBL-prevTimeBL;
-    BRTimeDiff = currTimeBR-prevTimeBR;
+    if (frontLeftCountNow == frontLeftCountPrev && (checkZeroVel == 1 || FLTimeDiff == 0)){
+       FLTimeDiff = 0;
+    }else{
+       FLTimeDiff = currTimeFL-prevTimeFL;
+    }
+    
+    if (frontRightCountNow == frontRightCountPrev && (checkZeroVel == 1 || FRTimeDiff == 0)){
+       FRTimeDiff = 0;
+    }else{
+       FRTimeDiff = currTimeFR-prevTimeFR;
+    }
+    
+    if (backLeftCountNow == backLeftCountPrev && (checkZeroVel == 1 || BLTimeDiff == 0)){
+       BLTimeDiff = 0;
+    }
+    
+    else{
+       BLTimeDiff = currTimeBL-prevTimeBL;
+    }
+    
+    if (backRightCountNow == backRightCountPrev && (checkZeroVel == 1 || BRTimeDiff == 0)){
+       BRTimeDiff = 0;
+    }else{
+       BRTimeDiff = currTimeBR-prevTimeBR;
+    }
 
     /* if wheel hasn't moved in the last 0.6 seconds, then assume its stationary */
     if (checkZeroVel == 1){
-      frontLeftCountPrev = frontLeftCountNow;
-      frontRightCountPrev = frontRightCountNow;
-      backLeftCountPrev = backLeftCountNow;
-      backRightCountPrev = backRightCountNow;
-  
-      frontLeftCountNow = frontLeftCount;
-      frontRightCountNow = frontRightCount;
-      backLeftCountNow = backLeftCount;
-      backRightCountNow = backRightCount;
-      
-      /* if wheel hasn't spun since last 0.3s, then assume the droid is stationary */
-      if (frontLeftCountNow == frontLeftCountPrev){
-        FLTimeDiff = 0;
-      }
-      if (frontRightCountNow == frontRightCountPrev){
-        FRTimeDiff = 0;
-      }
-      if (backLeftCountNow == backLeftCountPrev){
-        BLTimeDiff = 0;
-      }
-      if (backRightCountNow == backRightCountPrev){
-        BRTimeDiff = 0;
-      }
-
       checkZeroVel = 0;
-    } else{
+    }else{
       checkZeroVel += 1;
     }
-
-
-
 
     Serial.print(FLTimeDiff);
     Serial.print(",");
@@ -380,7 +378,6 @@ void moveRobot(float arcRadius, float velocity){
     FR.writeMicroseconds(rightServoGoal);
     BL.writeMicroseconds(leftServoGoal);
     BR.writeMicroseconds(rightServoGoal);
-
 }
 
 
@@ -398,7 +395,7 @@ void calibrate(){
   FR.writeMicroseconds(1500);
   BL.writeMicroseconds(1500);
   BR.writeMicroseconds(1500);
-  delay(6000);
+  delay(2000);
   FL.writeMicroseconds(800);
   FR.writeMicroseconds(800);
   BL.writeMicroseconds(800);
