@@ -53,15 +53,14 @@ unsigned long BLTimeDiff = 0;
 unsigned long BRTimeDiff = 0;
 unsigned long prevWheelCheckTime;
 unsigned long currTime = 0;
-unsigned int frontLeftCountPrev = 0;
-unsigned int frontRightCountPrev = 0;
-unsigned int backLeftCountPrev = 0;
-unsigned int backRightCountPrev = 0;
-unsigned int frontLeftCountNow = 0;
-unsigned int frontRightCountNow = 0;
-unsigned int backLeftCountNow = 0;
-unsigned int backRightCountNow = 0;
-
+//unsigned int frontLeftCountPrev = 0;
+//unsigned int frontRightCountPrev = 0;
+//unsigned int backLeftCountPrev = 0;
+//unsigned int backRightCountPrev = 0;
+//unsigned int frontLeftCountNow = 0;
+//unsigned int frontRightCountNow = 0;
+//unsigned int backLeftCountNow = 0;
+//unsigned int backRightCountNow = 0;
 
 /**
 * @brief Setup
@@ -93,10 +92,10 @@ void setup() {
 
 
 /* -- Interrupt Functions -- */
-volatile unsigned int frontLeftCount = 0;
-volatile unsigned int frontRightCount = 0;
-volatile unsigned int backLeftCount = 0;
-volatile unsigned int backRightCount = 0;
+//volatile unsigned int frontLeftCount = 0;
+//volatile unsigned int frontRightCount = 0;
+//volatile unsigned int backLeftCount = 0;
+//volatile unsigned int backRightCount = 0;
 /* ^ technically dont dont need these anymore but should keep just in case */
 
 /* Variables to track time and speed of wheels*/
@@ -108,63 +107,40 @@ volatile unsigned long prevTimeFL = 0;
 volatile unsigned long prevTimeFR = 0;
 volatile unsigned long prevTimeBL = 0;
 volatile unsigned long prevTimeBR = 0;
-volatile unsigned int FLread = 0;
-volatile unsigned int FRread = 0;
-volatile unsigned int BLread = 0;
-volatile unsigned int BRread = 0;
 
 
 /* Read rising edges */
 void frontLeftChange(){
   if(bitRead(PIND, 4) == 0){
-      if (FLread == 0){
-        prevTimeFL = currTimeFL;
-        currTimeFL = millis();
-        frontLeftCount++;
-
-        // FLread = 1;
-      }else{
-         FLread = 0;
-      }
+     prevTimeFL = currTimeFL;
+     currTimeFL = millis();
+     //frontLeftCount++;
   }
 }
 
 void frontRightChange(){
   if(bitRead(PIND, 5) == 0){
-      if (FRread == 0){
-        prevTimeFR = currTimeFR;
-        currTimeFR = millis();
-        frontRightCount++;
-        //FRread = 1;
-      }else{
-        FRread = 0;
-      }
+     prevTimeFR = currTimeFR;
+     currTimeFR = millis();
+     //frontRightCount++;
   }
 }
 
 void backLeftChange(){
   if(bitRead(PIND, 6) == 0){
-      if (BLread == 0){
-        prevTimeBL = currTimeBL;
-        currTimeBL = millis();
-        backLeftCount++;
-        //BLread = 1;
-      } else {
-        BLread = 0;
-      }
+     prevTimeBL = currTimeBL;
+     currTimeBL = millis();
+     //backLeftCount++;
+
   }
 }
 
 void backRightChange(){
   if(bitRead(PIND, 7) == 0){
-      if (BRread == 0){
-        prevTimeBR = currTimeBR;
-        currTimeBR = millis();
-        backRightCount++;
-        //BRread = 1;
-      } else {
-        BRread = 0;
-     }
+     prevTimeBR = currTimeBR;
+     currTimeBR = millis();
+     //backRightCount++;
+
   }
 }
 
@@ -186,37 +162,24 @@ void loop() {
 //  Serial.print("\n\r");
   currTime = millis();
 
-  
   /* Calculate Velocities of wheels every 0.3 seconds*/
   if (currTime - prevWheelCheckTime > 300){
-//    frontLeftCountNow = frontLeftCount;
-//    frontRightCountNow = frontRightCount;
-//    backLeftCountNow = backLeftCount;
-//    backRightCountNow = backRightCount;
-//    Serial.print(frontLeftCount);
-//    Serial.print(",");
-//    Serial.print(frontRightCount);
-//    Serial.print(",");
-//    Serial.print(backLeftCount);
-//    Serial.print(",");
-//    Serial.print(backRightCount);
-//    Serial.print("\n\r");
-
-    FLTimeDiff = currTimeFL-prevTimeFL;
-    FRTimeDiff = currTimeFR-prevTimeFR;
-    BLTimeDiff = currTimeBL-prevTimeBL;
-    BRTimeDiff = currTimeBR-prevTimeBR;
     
 //    frontLeftCountPrev = frontLeftCountNow;
 //    frontRightCountPrev = frontRightCountNow;
 //    backLeftCountPrev = backLeftCountNow;
 //    backRightCountPrev = backRightCountNow;
 
-//        Serial.print(currTimeFL);
-//        Serial.print(',');
-//        Serial.print(prevTimeFL);
-//        Serial.print('\n');
-//        
+//    frontLeftCountNow = frontLeftCount;
+//    frontRightCountNow = frontRightCount;
+//    backLeftCountNow = backLeftCount;
+//    backRightCountNow = backRightCount;
+
+    /* Calculates the time taken between each rotation */
+    FLTimeDiff = currTimeFL-prevTimeFL;
+    FRTimeDiff = currTimeFR-prevTimeFR;
+    BLTimeDiff = currTimeBL-prevTimeBL;
+    BRTimeDiff = currTimeBR-prevTimeBR;
 
     Serial.print(FLTimeDiff);
     Serial.print(",");
