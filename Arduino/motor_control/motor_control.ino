@@ -209,7 +209,7 @@ void loop() {
     Serial.print(BLTimeDiff);
     Serial.print(",");
     Serial.print(BRTimeDiff);
-    Serial.print("\n\r");
+    Serial.print("\n");
 
     prevWheelCheckTime = currTime;
   }

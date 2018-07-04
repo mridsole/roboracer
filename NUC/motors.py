@@ -60,10 +60,10 @@ class MotorHAL:
                 map(int, connection.readline()[:-1].split(b','))
             )
 
+            # Send the velocity data.
+            # TODO: Use Queue instead, so that we can block.
             pipe.send(MotorHAL._velocity_from_times(wheeltimes))
 
-
-        pass
 
     def __init__(self, serialpath=SERIAL_PATH):
 
@@ -74,7 +74,7 @@ class MotorHAL:
 
         # Initialize command values.
         self.setpoint_radius = 100.
-        self.setpoint_velocity = 2.
+        self.setpoint_velocity = 1.2
 
         # Pipe for communicating with the driver process.
         driver_pipe, child_pipe = Pipe()
@@ -85,24 +85,21 @@ class MotorHAL:
         self.driver_proc = Process(target=MotorHAL._driver_loop, args=(serialpath, child_pipe, ))
         self.driver_proc.start()
 
+        # Initialize velocity state.
+        self.vel = (0., 0.)
+
 
     def set_cmd(self, r, v):
 
         self.driver_pipe.send((r, v))
 
 
-        # # For now, just loop (TODO: use multiprocess to do async)
-        # while True:
-        #     
-        #     # Formulate the motor command.
-        #     motor_cmd = b'<M' + \
-        #         '{:.2f}'.format(self.setpoint_radius).encode() + b',' + \
-        #         '{:.2f}'.format(self.setpoint_velocity).encode() + b'>'
+    def get_vel(self):
 
-        #     # Send current motor commmand.
-        #     self.connection.write(motor_cmd)
+        # Flush the driver_pipe to get the latest velocity reading.
+        # This should be done periodically.
+        while self.driver_pipe.poll():
+            self.vels = self.driver_pipe.recv()
 
-        #     # Read encoder values (in ms)
-        #     wheeltimes = list(
-        #         map(int, self.connection.readline()[:-1].split(b','))
-        #     )
+        return self.vels
+
