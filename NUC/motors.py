@@ -25,13 +25,13 @@ class MotorHAL:
         return wheeltimes
 
 
-    def _driver_loop(connection, pipe):
+    def _driver_loop(serialpath, pipe):
         """
         The driver thread program.
         """
 
         # Open the serial connection
-        self.connection = serial.Serial(serialpath, baudrate=115200)
+        connection = serial.Serial(serialpath, baudrate=115200)
 
         # Wait 2.5 seconds for boot.
         time.sleep(2.0)
@@ -39,9 +39,21 @@ class MotorHAL:
         # Enable motors.
         connection.write(b'<E>')
 
+        r = 1000.
+        v = 0.
+
         while True:
 
             # Read the latest motor command.
+            while pipe.poll():
+                r, v = pipe.recv()
+
+            # Send the motor command.
+            motor_cmd = b'<M' + \
+                '{:.2f}'.format(r).encode() + b',' + \
+                '{:.2f}'.format(v).encode() + b'>'
+
+            connection.write(motor_cmd)
 
             # Read encoder values (in ms)
             wheeltimes = list(
@@ -66,9 +78,17 @@ class MotorHAL:
 
         # Pipe for communicating with the driver process.
         driver_pipe, child_pipe = Pipe()
+        self.driver_pipe = driver_pipe
+        self.child_pipe = child_pipe
 
-        self.driver_proc = Process(target=MotorHAL._driver_loop, args=(self.connection, child_pipe))
+        # Create and start the driver process.
+        self.driver_proc = Process(target=MotorHAL._driver_loop, args=(serialpath, child_pipe, ))
         self.driver_proc.start()
+
+
+    def set_cmd(self, r, v):
+
+        self.driver_pipe.send((r, v))
 
 
         # # For now, just loop (TODO: use multiprocess to do async)

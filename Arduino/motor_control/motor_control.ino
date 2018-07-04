@@ -153,7 +153,7 @@ void loop() {
 //  Serial.print(backLeftCount);
 //  Serial.print(",");
 //  Serial.print(backRightCount);
-//  Serial.print("\n\r");
+//  Serial.print("\n");
   currTime = millis();
 
   /* Calculate Velocities of wheels every 0.3 seconds*/
