@@ -61,8 +61,7 @@ unsigned int frontLeftCountNow = 0;
 unsigned int frontRightCountNow = 0;
 unsigned int backLeftCountNow = 0;
 unsigned int backRightCountNow = 0;
-
-
+unsigned int checkZeroVel = 0;
 /**
 * @brief Setup
 * Sets up serial.
@@ -70,7 +69,7 @@ unsigned int backRightCountNow = 0;
 * @return Does not return
 */
 void setup() {
-  Serial.begin(250000);
+  Serial.begin(115200);
   Serial.setTimeout(5);
 
   previousTime = millis();
@@ -87,8 +86,6 @@ void setup() {
   enableInterrupt(5, frontRightChange,CHANGE);
   enableInterrupt(6, backLeftChange,CHANGE);
   enableInterrupt(7, backRightChange,CHANGE);
-
-
 }
 
 
@@ -97,7 +94,6 @@ volatile unsigned int frontLeftCount = 0;
 volatile unsigned int frontRightCount = 0;
 volatile unsigned int backLeftCount = 0;
 volatile unsigned int backRightCount = 0;
-/* ^ technically dont dont need these anymore but should keep just in case */
 
 /* Variables to track time and speed of wheels*/
 volatile unsigned long currTimeFL= millis();
@@ -108,63 +104,37 @@ volatile unsigned long prevTimeFL = 0;
 volatile unsigned long prevTimeFR = 0;
 volatile unsigned long prevTimeBL = 0;
 volatile unsigned long prevTimeBR = 0;
-volatile unsigned int FLread = 0;
-volatile unsigned int FRread = 0;
-volatile unsigned int BLread = 0;
-volatile unsigned int BRread = 0;
-
 
 /* Read rising edges */
 void frontLeftChange(){
   if(bitRead(PIND, 4) == 0){
-      if (FLread == 0){
-        prevTimeFL = currTimeFL;
-        currTimeFL = millis();
-        frontLeftCount++;
-
-        // FLread = 1;
-      }else{
-         FLread = 0;
-      }
+     prevTimeFL = currTimeFL;
+     currTimeFL = millis();
+     frontLeftCount++;
   }
 }
 
 void frontRightChange(){
   if(bitRead(PIND, 5) == 0){
-      if (FRread == 0){
-        prevTimeFR = currTimeFR;
-        currTimeFR = millis();
-        frontRightCount++;
-        //FRread = 1;
-      }else{
-        FRread = 0;
-      }
+     prevTimeFR = currTimeFR;
+     currTimeFR = millis();
+     frontRightCount++;
   }
 }
 
 void backLeftChange(){
   if(bitRead(PIND, 6) == 0){
-      if (BLread == 0){
-        prevTimeBL = currTimeBL;
-        currTimeBL = millis();
-        backLeftCount++;
-        //BLread = 1;
-      } else {
-        BLread = 0;
-      }
+     prevTimeBL = currTimeBL;
+     currTimeBL = millis();
+     backLeftCount++;
   }
 }
 
 void backRightChange(){
   if(bitRead(PIND, 7) == 0){
-      if (BRread == 0){
-        prevTimeBR = currTimeBR;
-        currTimeBR = millis();
-        backRightCount++;
-        //BRread = 1;
-      } else {
-        BRread = 0;
-     }
+     prevTimeBR = currTimeBR;
+     currTimeBR = millis();
+     backRightCount++;
   }
 }
 
@@ -186,37 +156,51 @@ void loop() {
 //  Serial.print("\n\r");
   currTime = millis();
 
-  
   /* Calculate Velocities of wheels every 0.3 seconds*/
   if (currTime - prevWheelCheckTime > 300){
-//    frontLeftCountNow = frontLeftCount;
-//    frontRightCountNow = frontRightCount;
-//    backLeftCountNow = backLeftCount;
-//    backRightCountNow = backRightCount;
-//    Serial.print(frontLeftCount);
-//    Serial.print(",");
-//    Serial.print(frontRightCount);
-//    Serial.print(",");
-//    Serial.print(backLeftCount);
-//    Serial.print(",");
-//    Serial.print(backRightCount);
-//    Serial.print("\n\r");
-
-    FLTimeDiff = currTimeFL-prevTimeFL;
-    FRTimeDiff = currTimeFR-prevTimeFR;
-    BLTimeDiff = currTimeBL-prevTimeBL;
-    BRTimeDiff = currTimeBR-prevTimeBR;
+    frontLeftCountPrev = frontLeftCountNow;
+    frontRightCountPrev = frontRightCountNow;
+    backLeftCountPrev = backLeftCountNow;
+    backRightCountPrev = backRightCountNow;
     
-//    frontLeftCountPrev = frontLeftCountNow;
-//    frontRightCountPrev = frontRightCountNow;
-//    backLeftCountPrev = backLeftCountNow;
-//    backRightCountPrev = backRightCountNow;
+    frontLeftCountNow = frontLeftCount;
+    frontRightCountNow = frontRightCount;
+    backLeftCountNow = backLeftCount;
+    backRightCountNow = backRightCount;
 
-//        Serial.print(currTimeFL);
-//        Serial.print(',');
-//        Serial.print(prevTimeFL);
-//        Serial.print('\n');
-//        
+    /* Calculates the time taken between each rotation */
+    if (frontLeftCountNow == frontLeftCountPrev && (checkZeroVel == 1 || FLTimeDiff == 0)){
+       FLTimeDiff = 0;
+    }else{
+       FLTimeDiff = currTimeFL-prevTimeFL;
+    }
+    
+    if (frontRightCountNow == frontRightCountPrev && (checkZeroVel == 1 || FRTimeDiff == 0)){
+       FRTimeDiff = 0;
+    }else{
+       FRTimeDiff = currTimeFR-prevTimeFR;
+    }
+    
+    if (backLeftCountNow == backLeftCountPrev && (checkZeroVel == 1 || BLTimeDiff == 0)){
+       BLTimeDiff = 0;
+    }
+    
+    else{
+       BLTimeDiff = currTimeBL-prevTimeBL;
+    }
+    
+    if (backRightCountNow == backRightCountPrev && (checkZeroVel == 1 || BRTimeDiff == 0)){
+       BRTimeDiff = 0;
+    }else{
+       BRTimeDiff = currTimeBR-prevTimeBR;
+    }
+
+    /* if wheel hasn't moved in the last 0.6 seconds, then assume its stationary */
+    if (checkZeroVel == 1){
+      checkZeroVel = 0;
+    }else{
+      checkZeroVel += 1;
+    }
 
     Serial.print(FLTimeDiff);
     Serial.print(",");
@@ -394,7 +378,6 @@ void moveRobot(float arcRadius, float velocity){
     FR.writeMicroseconds(rightServoGoal);
     BL.writeMicroseconds(leftServoGoal);
     BR.writeMicroseconds(rightServoGoal);
-
 }
 
 
@@ -412,7 +395,7 @@ void calibrate(){
   FR.writeMicroseconds(1500);
   BL.writeMicroseconds(1500);
   BR.writeMicroseconds(1500);
-  delay(6000);
+  delay(2000);
   FL.writeMicroseconds(800);
   FR.writeMicroseconds(800);
   BL.writeMicroseconds(800);
