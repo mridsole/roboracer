@@ -28,6 +28,10 @@ mhal = MotorHAL()
 opts = FrameInfo.DEFAULT_OPTIONS.copy()
 opts['DEBUG'] = False
 
+input('Enter to start: ')
+
+i = 0
+
 # Capture frames for debugging
 circ = None
 line_l = None
@@ -54,4 +58,8 @@ while True:
     # Set motor command.
     mhal.set_cmd(r, v)
 
-    
+    # Poll for velocity
+    mhal.get_vel()
+
+    print(i) 
+    i += 1
