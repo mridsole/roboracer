@@ -53,15 +53,15 @@ unsigned long BLTimeDiff = 0;
 unsigned long BRTimeDiff = 0;
 unsigned long prevWheelCheckTime;
 unsigned long currTime = 0;
-//unsigned int frontLeftCountPrev = 0;
-//unsigned int frontRightCountPrev = 0;
-//unsigned int backLeftCountPrev = 0;
-//unsigned int backRightCountPrev = 0;
-//unsigned int frontLeftCountNow = 0;
-//unsigned int frontRightCountNow = 0;
-//unsigned int backLeftCountNow = 0;
-//unsigned int backRightCountNow = 0;
-
+unsigned int frontLeftCountPrev = 0;
+unsigned int frontRightCountPrev = 0;
+unsigned int backLeftCountPrev = 0;
+unsigned int backRightCountPrev = 0;
+unsigned int frontLeftCountNow = 0;
+unsigned int frontRightCountNow = 0;
+unsigned int backLeftCountNow = 0;
+unsigned int backRightCountNow = 0;
+unsigned int checkZeroVel = 0;
 /**
 * @brief Setup
 * Sets up serial.
@@ -69,7 +69,7 @@ unsigned long currTime = 0;
 * @return Does not return
 */
 void setup() {
-  Serial.begin(250000);
+  Serial.begin(115200);
   Serial.setTimeout(5);
 
   previousTime = millis();
@@ -92,11 +92,10 @@ void setup() {
 
 
 /* -- Interrupt Functions -- */
-//volatile unsigned int frontLeftCount = 0;
-//volatile unsigned int frontRightCount = 0;
-//volatile unsigned int backLeftCount = 0;
-//volatile unsigned int backRightCount = 0;
-/* ^ technically dont dont need these anymore but should keep just in case */
+volatile unsigned int frontLeftCount = 0;
+volatile unsigned int frontRightCount = 0;
+volatile unsigned int backLeftCount = 0;
+volatile unsigned int backRightCount = 0;
 
 /* Variables to track time and speed of wheels*/
 volatile unsigned long currTimeFL= millis();
@@ -114,7 +113,7 @@ void frontLeftChange(){
   if(bitRead(PIND, 4) == 0){
      prevTimeFL = currTimeFL;
      currTimeFL = millis();
-     //frontLeftCount++;
+     frontLeftCount++;
   }
 }
 
@@ -122,7 +121,7 @@ void frontRightChange(){
   if(bitRead(PIND, 5) == 0){
      prevTimeFR = currTimeFR;
      currTimeFR = millis();
-     //frontRightCount++;
+     frontRightCount++;
   }
 }
 
@@ -130,7 +129,7 @@ void backLeftChange(){
   if(bitRead(PIND, 6) == 0){
      prevTimeBL = currTimeBL;
      currTimeBL = millis();
-     //backLeftCount++;
+     backLeftCount++;
 
   }
 }
@@ -139,7 +138,7 @@ void backRightChange(){
   if(bitRead(PIND, 7) == 0){
      prevTimeBR = currTimeBR;
      currTimeBR = millis();
-     //backRightCount++;
+     backRightCount++;
 
   }
 }
@@ -164,22 +163,46 @@ void loop() {
 
   /* Calculate Velocities of wheels every 0.3 seconds*/
   if (currTime - prevWheelCheckTime > 300){
-    
-//    frontLeftCountPrev = frontLeftCountNow;
-//    frontRightCountPrev = frontRightCountNow;
-//    backLeftCountPrev = backLeftCountNow;
-//    backRightCountPrev = backRightCountNow;
-
-//    frontLeftCountNow = frontLeftCount;
-//    frontRightCountNow = frontRightCount;
-//    backLeftCountNow = backLeftCount;
-//    backRightCountNow = backRightCount;
 
     /* Calculates the time taken between each rotation */
     FLTimeDiff = currTimeFL-prevTimeFL;
     FRTimeDiff = currTimeFR-prevTimeFR;
     BLTimeDiff = currTimeBL-prevTimeBL;
     BRTimeDiff = currTimeBR-prevTimeBR;
+
+    /* if wheel hasn't moved in the last 0.6 seconds, then assume its stationary */
+    if (checkZeroVel == 1){
+      frontLeftCountPrev = frontLeftCountNow;
+      frontRightCountPrev = frontRightCountNow;
+      backLeftCountPrev = backLeftCountNow;
+      backRightCountPrev = backRightCountNow;
+  
+      frontLeftCountNow = frontLeftCount;
+      frontRightCountNow = frontRightCount;
+      backLeftCountNow = backLeftCount;
+      backRightCountNow = backRightCount;
+      
+      /* if wheel hasn't spun since last 0.3s, then assume the droid is stationary */
+      if (frontLeftCountNow == frontLeftCountPrev){
+        FLTimeDiff = 0;
+      }
+      if (frontRightCountNow == frontRightCountPrev){
+        FRTimeDiff = 0;
+      }
+      if (backLeftCountNow == backLeftCountPrev){
+        BLTimeDiff = 0;
+      }
+      if (backRightCountNow == backRightCountPrev){
+        BRTimeDiff = 0;
+      }
+
+      checkZeroVel = 0;
+    } else{
+      checkZeroVel += 1;
+    }
+
+
+
 
     Serial.print(FLTimeDiff);
     Serial.print(",");
