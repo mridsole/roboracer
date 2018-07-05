@@ -24,8 +24,6 @@ config.enable_stream(rs.stream.color, DIMS[0], DIMS[1], rs.format.bgr8, FPS)
 pipeline = rs.pipeline()
 pipeline.start(config)
 
-controller = Controller()
-
 # Mock up a trajectory object.
 class MockTrajectory:
 
@@ -42,7 +40,9 @@ mhal = MotorHAL()
 
 input('waiting ...')
 
-mhal.set_cmd(0.2, 0.2)
+controller = Controller(mhal)
+controller.set_cmd(((0.2, 0.2), 0))
+# mhal.set_cmd(0.2, 0.2)
 time.sleep(1.5)
 
 while True:
@@ -53,17 +53,16 @@ while True:
     if not depth_frame or not color_frame: continue
 
     mt = MockTrajectory()
-    cmd = controller.tick(mt)
-    print(cmd)
+    controller.tick(mt)
 
     # Set motor command.
-    mhal.set_cmd(*cmd)
+    # mhal.set_cmd(*cmd)
 
     # Poll for velocity
-    mhal.get_vel()
-    # print(mhal.get_vel())
+    # mhal.get_vel()
+    print(mhal.get_vel())
 
-    if controller.slow_tick >= 150:
-        mhal.set_cmd(0,0)
-        time.sleep(100)
-        break
+    # if controller.slow_tick >= 150:
+    #     mhal.set_cmd(0,0)
+    #     time.sleep(100)
+    #     break
