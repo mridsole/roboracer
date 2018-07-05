@@ -21,6 +21,7 @@
 #define MAX_RPM 295
 #define MAX_RAD_PER_S 30.8923
 #define MAX_SERVO 500*CONTROL_RATIO + 1000
+// #define MAX_SERVO 2000
 #define MIN_SERVO 1000
 #define MAX_WAIT_TIME 900
 
@@ -181,7 +182,7 @@ void loop() {
       FLTimeDiff = currTimeFL-prevTimeFL;
     }    
     
-    if (frontRightCountNow == frontRightCountPrev && (currTime - prevFLCheck > MAX_WAIT_TIME || FRTimeDiff == 0)){
+    if (frontRightCountNow == frontRightCountPrev && (currTime - prevFRCheck > MAX_WAIT_TIME || FRTimeDiff == 0)){
        prevFRCheck = currTime;
        FRTimeDiff = 0;
     }else{
@@ -195,7 +196,7 @@ void loop() {
        BLTimeDiff = currTimeBL-prevTimeBL;
     }
     
-    if (backRightCountNow == backRightCountPrev && (currTime - prevBLCheck > MAX_WAIT_TIME || BRTimeDiff == 0)){
+    if (backRightCountNow == backRightCountPrev && (currTime - prevBRCheck > MAX_WAIT_TIME || BRTimeDiff == 0)){
        prevBRCheck = currTime;
        BRTimeDiff = 0;
     }else{
@@ -283,7 +284,6 @@ void loop() {
   }
 }
 
-
 /**
 * @brief Enable Motors
 * Sets PWM pins to allow for instructions
@@ -342,8 +342,6 @@ void moveRobot(float leftVelocity, float rightVelocity){
   float angularSpeedLeft = leftVelocity/(WHEEL_RADIUS);
   float angularSpeedRight = rightVelocity/(WHEEL_RADIUS);
 
-  
-
   /* If out of achievable range, scale values down */
   if(angularSpeedLeft > MAX_RAD_PER_S || angularSpeedRight > MAX_RAD_PER_S){
     float scaleRatio;
@@ -375,7 +373,7 @@ void moveRobot(float leftVelocity, float rightVelocity){
 //  Serial.print(rightServoGoal);
 //  Serial.print("\n\r");
     FL.writeMicroseconds(leftServoGoal);
-    FR.writeMicroseconds(rightServoGoal);
+    FR.writeMicroseconds(rightServoGoal+15);
     BL.writeMicroseconds(leftServoGoal);
     BR.writeMicroseconds(rightServoGoal);
 }
@@ -391,15 +389,15 @@ void moveRobot(float leftVelocity, float rightVelocity){
 */
 void calibrate(){
   Serial.println("Calibrating...");
-  FL.writeMicroseconds(1500);
+//  FL.writeMicroseconds(1500);
   FR.writeMicroseconds(1500);
-  BL.writeMicroseconds(1500);
-  BR.writeMicroseconds(1500);
-  delay(2000);
-  FL.writeMicroseconds(800);
-  FR.writeMicroseconds(800);
-  BL.writeMicroseconds(800);
-  BR.writeMicroseconds(800);
+//  BL.writeMicroseconds(1500);
+//  BR.writeMicroseconds(1500);
+  delay(6000);
+  FL.writeMicroseconds(1000);
+  FR.writeMicroseconds(1000);
+  BL.writeMicroseconds(1000);
+  BR.writeMicroseconds(1000);
   Serial.println("Press Any Key to Continue When Beeping Stops");
   while(Serial.available() == 0){}
 }
