@@ -155,28 +155,20 @@ void loop() {
 //  Serial.print(backRightCount);
 //  Serial.print("\n\r");
   currTime = millis();
- 
+
   /* Calculate Velocities of wheels every 0.3 seconds*/
   if (currTime - prevWheelCheckTime > 300){
     frontLeftCountPrev = frontLeftCountNow;
     frontRightCountPrev = frontRightCountNow;
     backLeftCountPrev = backLeftCountNow;
     backRightCountPrev = backRightCountNow;
-      
+    
     frontLeftCountNow = frontLeftCount;
     frontRightCountNow = frontRightCount;
     backLeftCountNow = backLeftCount;
     backRightCountNow = backRightCount;
-  
 
     /* Calculates the time taken between each rotation */
-    if (frontLeftCountNow == frontLeftCountPrev &&(currTime - prevFLCheck > 900 || FLTimeDiff == 0)){
-      prevFLCheck = currTime;
-      FlTimeDiff = 0;
-    }else{
-      FLTimeDiff = currTimeFL-prevTimeFL;
-    }    
-
     if (frontLeftCountNow == frontLeftCountPrev && (checkZeroVel == 2 || FLTimeDiff == 0)){
        FLTimeDiff = 0;
     }else{
