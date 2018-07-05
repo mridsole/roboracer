@@ -1,5 +1,5 @@
 """
-Basic frame-by-frame line-following test.
+The final real-time control loop.
 """
 
 import pyrealsense2 as rs
@@ -11,10 +11,11 @@ import cv2
 import time
 
 
-# Initialize the motor HAL
+# First initialize the motor HAL which opens a connection with the Arduino.
+# This will make the wheels spin for a couple of seconds.
 mhal = MotorHAL()
-
 input('Enter to start: ')
+controller = Controller(mhal)
 
 DIMS = (848, 480)
 FPS = 15
@@ -32,7 +33,6 @@ pipeline.start(config)
 opts = FrameInfo.DEFAULT_OPTIONS.copy()
 opts['DEBUG'] = False
 
-controller = Controller()
 
 while True:
 
@@ -49,10 +49,14 @@ while True:
 
     frobj = FrameObjects(frinfo)
     traj = Trajectory(frobj)
+
+    # This isn't actually the "tick", this is setting the move reference based
+    # on state.
     cmd = controller.tick(traj)
+    # print(traj.immediate_path[1])
 
-    # Set motor command.
-    mhal.set_cmd(*cmd)
+    # Set motor command. TODO: deprecate, this is handled by the controller.
+    # mhal.set_cmd(*cmd)
 
-    # Poll for velocity
+    # Poll for velocity (why not?)
     print(mhal.get_vel())

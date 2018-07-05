@@ -1,5 +1,12 @@
 """
 The high-level controller that combines trajectory generation and driving.
+
+GOOD VALUES are:
+
+TICKRATE = 20
+SLOW_CMD = (0.1, 0.1)
+SLOW_TICKS = 3
+FAST_TICKS = 5
 """
 
 from multiprocessing import Process, Pipe
@@ -8,28 +15,33 @@ import time
 
 class Controller:
 
-    # Tickrate (Hz)
+    # Tickrate (Hz) - should be roughly synchronized with the MotorHAL tickrate.
     TICKRATE = 20
-    
-    # Slow every SLOW_EVERY ticks.
-    SLOW_EVERY = 3
 
     # The slow command to send on such ticks.
     SLOW_CMD = (0.1, 0.1)
 
+    # How many ticks for slow?
+    SLOW_TICKS = 3
+
+    # How many ticks for fast?
+    FAST_TICKS = 5
+
+
     def _next_slow(slowstate):
         is_slow, i = slowstate
         if is_slow:
-            if i < 3:
+            if i < Controller.SLOW_TICKS:
                 return (is_slow, i + 1)
             else:
                 return (not is_slow, 0)
         else:
-            if i < 5:
+            if i < Controller.FAST_TICKS:
                 return (is_slow, i + 1)
             else:
                 return (not is_slow, 0)
     
+
     def _control_loop(mhal, pipe):
 
         cmd, direction = ((0,0), 0)
@@ -50,7 +62,6 @@ class Controller:
                 cmd = Controller.SLOW_CMD
 
             mhal.set_cmd(*cmd)
-            print(cmd)
 
             time.sleep(1/Controller.TICKRATE)
 
@@ -80,6 +91,7 @@ class Controller:
 
         # MPC-ish framework: use the provided trajectory to turn etc.
         # TODO: something more complex here?
+        # TODO: Implement code for checking if we should stop.
 
         self.driver_pipe.send(trajectory.immediate_path)
 

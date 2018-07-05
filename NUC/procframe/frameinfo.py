@@ -25,7 +25,7 @@ class FrameInfo:
 
         # Actual track values (need to test properly):
         THRESH_1 = (
-            np.array([166/2, 50, 41]),
+            np.array([166/2, 50, 35]),
             np.array([210/2, 250, 255]) 
         )
 

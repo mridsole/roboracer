@@ -126,28 +126,29 @@ class Trajectory:
 
         if self.avoid_line is None:
             # If we have no line, just go forward.
-            return (Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED)
+            return ((Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED), 0)
 
         n, k = self.avoid_line
         v = np.array([-n[1], n[0]])
         if v.dot([0,1]) < 0: v = -v
 
         # Project the origin onto the target line and move upwards
-        z = k * n + 0.7 * v
+        z = k * n + 0.5 * v
         z = z / np.linalg.norm(z)
 
         # TODO: generate (vl, vr) instead of (r, v)
 
-        # This is correct.
-        fact = np.arcsin(np.cross(z, [0,1]))
+        # This is correct (or is it??).
+        fact = np.arcsin(np.dot([1,0], z))
 
-        # TODO: What about these thresholds?
+        # TODO: What about these thresholds? This is about a 22 degree window
+        # (which is reasonable.
         if fact > 0.2:
             return (Trajectory.RIGHT_TURN, 1)
         elif fact < -0.2:
             return (Trajectory.LEFT_TURN, -1)
         
-        # Otherwise we just do this ...
+        # Otherwise, just go forward slowly.
         return (
             (Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED),
             0
