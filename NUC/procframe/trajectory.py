@@ -7,7 +7,7 @@ class Trajectory:
     Use a FrameInfo object to plan a local trajectory.
     """
 
-    SLOW_SPEED = 0.2
+    SLOW_SPEED = 0.22
     FAST_SPEED = 1.4
 
     LEFT_TURN = (0.15, 0.75)

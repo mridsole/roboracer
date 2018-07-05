@@ -73,6 +73,10 @@ class Controller:
                 cmd, direction, stop = pipe.recv()
 
             # if stop:
+            #     is_init, is_slow, i = slow_state
+            #     slow_state = (is_init, is_slow, 0)
+
+            # if stop:
             #     slow_state = (True, False, 0)
             #     cmd = Controller.STOP_CMD
             #     print('Init stop')
