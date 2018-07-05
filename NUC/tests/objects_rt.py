@@ -7,6 +7,7 @@ from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.collections import PatchCollection
 import cv2
 import IPython
+import time
 
 # Testing FrameInfo
 
@@ -69,6 +70,7 @@ while True:
 
     traj = Trajectory(frobj)
     print(traj.immediate_path)
+    time.sleep(0.2)
 
     [p.remove() for p in reversed(ax.patches)]
 

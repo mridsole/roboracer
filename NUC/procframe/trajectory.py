@@ -121,29 +121,36 @@ class Trajectory:
     @cachedproperty
     def immediate_path(self):
 
-        if self.frameobjects.target_line is None:
+        if self.avoid_line is None:
             # If we have no line, just go forward.
-            return (1000., Trajectory.SLOW_SPEED) 
+            return (Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED)
 
-        v, xint = self.frameobjects.target_line
-        n, k = self.frameobjects.target_line_nk
+        n, k = self.avoid_line
+        v = np.array([-n[1], n[0]])
+        if v.dot([0,1]) < 0: v = -v
 
         # Project the origin onto the target line and move upwards
-        z = k * n + 0.4 * v
+        z = k * n + 0.7 * v
         z = z / np.linalg.norm(z)
 
         # TODO: generate (vl, vr) instead of (r, v)
 
+        # This is correct.
+        fact = np.arcsin(np.cross(z, [0,1]))
+        v_l = Trajectory.SLOW_SPEED * min(1, 1 + fact)
+        v_r = Trajectory.SLOW_SPEED * min(1, 1 - fact)
 
-        # fact = self.CURVE_WEIGHT * np.arccos(np.dot(z, [0,1])) * np.sign(n.dot([0,1]))
-        # fact = self.CURVE_WEIGHT * np.cross(z, [0,1])# * np.sign(n.dot([0,1]))
-        fact = Trajectory.CURVE_WEIGHT * v.dot([1,0])
-        print(fact)
-        r = (1 / (fact + 2e-4)) * Trajectory.R_MIN
+        return (v_l, v_r)
 
-        v = Trajectory.SLOW_SPEED
+        # # fact = self.CURVE_WEIGHT * np.arccos(np.dot(z, [0,1])) * np.sign(n.dot([0,1]))
+        # # fact = self.CURVE_WEIGHT * np.cross(z, [0,1])# * np.sign(n.dot([0,1]))
+        # fact = Trajectory.CURVE_WEIGHT * v.dot([1,0])
+        # print(fact)
+        # r = (1 / (fact + 2e-4)) * Trajectory.R_MIN
 
-        return (r,v)
+        # v = Trajectory.SLOW_SPEED
+
+        # return (r,v)
 
     
     @cachedproperty
