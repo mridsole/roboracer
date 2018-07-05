@@ -8,7 +8,7 @@ import os
 import time
 from multiprocessing import Process, Pipe
 
-# The USB port used for the motor Arduino
+# TODO: need to change this to use (vl, vr) instead of (r, v)
 
 # Wheel radius in metres.
 WHEEL_RADIUS = 0.06
@@ -21,7 +21,12 @@ class MotorHAL:
 
     
     def _velocity_from_times(wheeltimes):
-        # TODO
+
+        # TODO: Leave for now, encoders fucked
+
+        # Use the wheel radius to compute the velocity
+
+        # Average the 
         return wheeltimes
 
 
@@ -39,14 +44,14 @@ class MotorHAL:
         # Enable motors.
         connection.write(b'<E>')
 
-        r = 1000.
-        v = 0.
+        vl = 0.
+        vr = 0.
 
         while True:
 
             # Read the latest motor command.
             while pipe.poll():
-                r, v = pipe.recv()
+                vl, vr = pipe.recv()
 
             # Send the motor command.
             motor_cmd = b'<M' + \
@@ -71,11 +76,6 @@ class MotorHAL:
         if not os.path.exists(serialpath):
             raise Exception('Serial path does not exist: ' + serialpath)
 
-
-        # Initialize command values.
-        self.setpoint_radius = 100.
-        self.setpoint_velocity = 1.2
-
         # Pipe for communicating with the driver process.
         driver_pipe, child_pipe = Pipe()
         self.driver_pipe = driver_pipe
@@ -89,9 +89,14 @@ class MotorHAL:
         self.vel = (0., 0.)
 
 
-    def set_cmd(self, r, v):
+    # def set_cmd(self, r, v):
 
-        self.driver_pipe.send((r, v))
+    #     self.driver_pipe.send((r, v))
+
+
+    def set_cmd(self, vl, vr):
+
+        self.driver_pipe.send((vl, vr))
 
 
     def get_vel(self):

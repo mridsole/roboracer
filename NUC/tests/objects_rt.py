@@ -26,7 +26,7 @@ FPS = 15
 
 # Device setup.
 config = rs.config()
-config.enable_device_from_file('../data/realtrack1.bag')
+config.enable_device_from_file('../data/finaltrack3.bag')
 config.enable_all_streams()
 pipeline = rs.pipeline()
 pipeline.start(config)
@@ -127,7 +127,7 @@ while True:
     plt.pause(0.001)
 
     cv2.imshow('color', np.asanyarray(color_frame.get_data()))
-    cv2.imshow('deptth', cv2.applyColorMap(
+    cv2.imshow('depth', cv2.applyColorMap(
         cv2.convertScaleAbs(np.asanyarray(depth_frame.get_data()), alpha=0.03), 
         cv2.COLORMAP_JET
     ))

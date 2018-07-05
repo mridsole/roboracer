@@ -18,9 +18,15 @@ class FrameInfo:
 
     def THRESH_BLUE_LINE(x_bgr):
 
+        # THRESH_1 = (
+        #     np.array([193/2, 50, 55]),
+        #     np.array([220/2, 210, 255]) 
+        # )
+
+        # Actual track values (need to test properly):
         THRESH_1 = (
-            np.array([193/2, 50, 55]),
-            np.array([220/2, 210, 255]) 
+            np.array([176/2, 50, 41]),
+            np.array([210/2, 250, 255]) 
         )
 
         # THRESH_2 = (
@@ -51,8 +57,8 @@ class FrameInfo:
     def THRESH_OBSTACLES(x_bgr):
 
         THRESH_1 = (
-            np.array([245/2, 20, 40]),
-            np.array([300/2, 190, 255]) 
+            np.array([285/2, 10, 35]),
+            np.array([320/2, 240, 255]) 
         )
 
         return cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
@@ -75,7 +81,7 @@ class FrameInfo:
         # Maximum line distance to consider
         # TODO: we should be able to increase this once we don't
         # have to deal with the lockers
-        'MAX_LINE_DISTANCE': 3.2,
+        'MAX_LINE_DISTANCE': 3.0,
         
         # Threshold of the left line, in HLS, (min, max).
         'THRESH_L': THRESH_BLUE_LINE,
@@ -90,10 +96,10 @@ class FrameInfo:
         'THRESH_CARS': ( np.array([]), np.array([]) ),
 
         # Kernel for threshold cleaning (morphological open)
-        'THRESH_OPEN_KERNEL': np.ones((3,3)),
+        'THRESH_OPEN_KERNEL': np.ones((2,2)),
 
         'OBS_CLOSE_KERNEL': cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(30,30)),
-        'OBS_ERODE_KERNEL': cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(40,40)),
+        'OBS_ERODE_KERNEL': cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(20,20)),
 
         # Minimum y value (in camera space) for line points to register)
         # TODO: deprecated
@@ -104,7 +110,7 @@ class FrameInfo:
         'LINE_CANNY_MAX': 130,
 
         # How far from the ground plane are line points allowed to be?
-        'GROUND_PLANE_HEIGHT_TOL': 0.05,
+        'GROUND_PLANE_HEIGHT_TOL': 0.10,
 
         # Provide a ground plane to be used (instead of estimating
         # based on lines). If none, one will be calculated from lines.
@@ -219,6 +225,9 @@ class FrameInfo:
 
         mask = self.options['THRESH_OBSTACLES'](self._hls)
 
+        if self.options['DEBUG']:
+            cv2.imshow('obstacle', mask)
+
         mask = cv2.morphologyEx(
             mask, 
             cv2.MORPH_CLOSE, 
@@ -231,8 +240,6 @@ class FrameInfo:
             self.options['OBS_ERODE_KERNEL']
         )
 
-        if self.options['DEBUG']:
-            cv2.imshow('obstacle', mask)
 
         return mask.ravel()
 
@@ -300,8 +307,8 @@ class FrameInfo:
         H, W = self.frame_dims
         mask = np.ones(self.frame_dims)
         mask[0:int(0.32 * H),:] = 0.
-        return mask.flatten()
-        # mask = np.logical_and(mask.flatten(), self.local_object_vmask)
+        # return mask.flatten()
+        mask = np.logical_and(mask.flatten(), self.local_object_vmask)
 
         return mask
 
@@ -318,7 +325,13 @@ class FrameInfo:
     
     @cachedproperty
     def line_l_vmask(self):
-        return np.logical_and(self.line_l_mask, self.ground_plane_pts_vmask)
+        mask = np.logical_and(self.line_l_mask, self.ground_plane_pts_vmask)
+
+        if self.options['DEBUG']:
+            H,W = self.frame_dims
+            cv2.imshow('l_vmask', 255*np.array(mask, dtype=np.uint8).reshape((H,W)))
+
+        return mask
 
 
     @cachedproperty
