@@ -9,12 +9,17 @@ class FrameObjects:
     DEFAULT_OPTIONS = {
 
         # Minimum points on a line to be detected as a line.
-        'MIN_LINE_POINTS': 20,
+        'MIN_LINE_POINTS': 35,
 
         # TODO: min line variance explained (PCA)
 
         # Minimum points on an obstacle to be detected.
-        'MIN_OBSTACLE_POINTS': 30,
+        'MIN_OBSTACLE_POINTS': 40,
+
+        # Minimum points on an obstacle to be detected.
+        'MIN_EXPLAINED_VARIANCE_SQRT': 0.09,
+
+        'MIN_EXPLAINED_VARIANCE_RATIO': 0.8
     }
 
     def __init__(self, frinfo, opts=DEFAULT_OPTIONS):
@@ -173,6 +178,14 @@ class FrameObjects:
 
         pca = PCA(n_components=2)
         pca.fit(pts)
+
+        # Require a minimum explained variance.
+        if np.sqrt(pca.explained_variance_[0]) < self.options['MIN_EXPLAINED_VARIANCE_SQRT']:
+            return None
+
+        # Require a minimum explained variance ratio.
+        if np.sqrt(pca.explained_variance_ratio_[0]) < self.options['MIN_EXPLAINED_VARIANCE_RATIO']:
+            return None
 
         # Outwards pointing normal.
         e2 = pca.components_[1]

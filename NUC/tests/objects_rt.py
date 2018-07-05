@@ -1,6 +1,6 @@
 import pyrealsense2 as rs
 import numpy as np
-from procframe import FrameInfo, FrameObjects
+from procframe import FrameInfo, FrameObjects, Trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle, ConnectionPatch
@@ -67,6 +67,9 @@ while True:
 
     frobj = FrameObjects(frinfo)
 
+    traj = Trajectory(frobj)
+    print(traj.immediate_path)
+
     [p.remove() for p in reversed(ax.patches)]
 
     vm = frinfo.lines_vmask
@@ -83,6 +86,8 @@ while True:
         w = line_target.pop(0)
         if w is not None: w.remove()
         line_target = None
+
+    _ = frinfo.line_gr_mask
 
     # Scatter points
     pts_l = frinfo.line_l_pts_plane

@@ -26,8 +26,33 @@ class MotorHAL:
 
         # Use the wheel radius to compute the velocity
 
-        # Average the 
-        return wheeltimes
+        # Average the left wheels and the right
+        FL, FR, BL, BR = wheeltimes
+
+        # Special cases: handle bad reports
+        if FL == 0 and BL != 0:
+            FL = BL
+        elif FL != 0 and BL == 0:
+            BL = FL
+
+        if FR == 0 and BR != 0:
+            FR = BR
+        elif FR != 0 and BR == 0:
+            BR = FR
+
+
+        left = (FL + BL) / 2
+        right = (FR + BR) / 2
+
+        left_lin = 0
+        if left != 0:
+            left_lin = 2*np.pi*(1 / left)
+
+        right_lin = 0
+        if right != 0:
+            right_lin = 2*np.pi*(1 / right)
+
+        return (left_lin, right_lin)
 
 
     def _driver_loop(serialpath, pipe):

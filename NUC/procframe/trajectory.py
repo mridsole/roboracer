@@ -38,6 +38,9 @@ class Trajectory:
         z = k * n + 0.4 * v
         z = z / np.linalg.norm(z)
 
+        # TODO: generate (vl, vr) instead of (r, v)
+
+
         # fact = self.CURVE_WEIGHT * np.arccos(np.dot(z, [0,1])) * np.sign(n.dot([0,1]))
         # fact = self.CURVE_WEIGHT * np.cross(z, [0,1])# * np.sign(n.dot([0,1]))
         fact = Trajectory.CURVE_WEIGHT * v.dot([1,0])

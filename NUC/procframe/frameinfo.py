@@ -25,7 +25,7 @@ class FrameInfo:
 
         # Actual track values (need to test properly):
         THRESH_1 = (
-            np.array([176/2, 50, 41]),
+            np.array([166/2, 50, 41]),
             np.array([210/2, 250, 255]) 
         )
 
@@ -45,7 +45,20 @@ class FrameInfo:
 
         THRESH_1 = (
             np.array([38/2, 25, 60]),
-            np.array([75/2, 200, 255]) 
+            np.array([75/2, 210, 255]) 
+        )
+
+        return cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
+        # t2 = cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
+
+        # return cv2.bitwise_or(t1, t2)
+
+
+    def THRESH_GREEN_LINE(x_bgr):
+
+        THRESH_1 = (
+            np.array([115/2, 25, 60]),
+            np.array([150/2, 240, 255]) 
         )
 
         return cv2.inRange(x_bgr, THRESH_1[0], THRESH_1[1])
@@ -81,13 +94,16 @@ class FrameInfo:
         # Maximum line distance to consider
         # TODO: we should be able to increase this once we don't
         # have to deal with the lockers
-        'MAX_LINE_DISTANCE': 3.0,
+        'MAX_LINE_DISTANCE': 2.6,
         
         # Threshold of the left line, in HLS, (min, max).
         'THRESH_L': THRESH_BLUE_LINE,
 
         # Function to threshold the right line.
         'THRESH_R': THRESH_YELLOW_LINE,
+
+        # Function to threshold the right line.
+        'THRESH_G': THRESH_GREEN_LINE,
 
         # Threshold of obstacles, in HLS, (min, max).
         'THRESH_OBSTACLES': THRESH_OBSTACLES,
@@ -110,7 +126,7 @@ class FrameInfo:
         'LINE_CANNY_MAX': 130,
 
         # How far from the ground plane are line points allowed to be?
-        'GROUND_PLANE_HEIGHT_TOL': 0.10,
+        'GROUND_PLANE_HEIGHT_TOL': 0.18,
 
         # Provide a ground plane to be used (instead of estimating
         # based on lines). If none, one will be calculated from lines.
@@ -213,6 +229,22 @@ class FrameInfo:
 
         if self.options['DEBUG']:
             cv2.imshow('right', mask)
+
+        return mask.ravel()
+
+
+    @cachedproperty
+    def line_gr_mask(self):
+        """
+        Image mask for the green line.
+        """
+
+        mask = self.options['THRESH_G'](self._hls)
+        kernel = self.options['THRESH_OPEN_KERNEL']
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+        if self.options['DEBUG']:
+            cv2.imshow('green', mask)
 
         return mask.ravel()
 
@@ -394,6 +426,7 @@ class FrameInfo:
         # A final filtering operation: only consider points that are
         # within a certain distance of the plane.
         pts_plane = self.pts_camera_to_plane(self.line_l_pts)
+        # return pts_plane
 
         in_plane = np.abs(pts_plane[:,2]) < self.options['GROUND_PLANE_HEIGHT_TOL']
         return pts_plane[in_plane, :]
@@ -402,6 +435,7 @@ class FrameInfo:
     @cachedproperty
     def line_r_pts_plane(self):
         pts_plane = self.pts_camera_to_plane(self.line_r_pts)
+        # return pts_plane
 
         in_plane = np.abs(pts_plane[:,2]) < self.options['GROUND_PLANE_HEIGHT_TOL']
         return pts_plane[in_plane, :]
