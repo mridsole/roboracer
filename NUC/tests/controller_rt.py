@@ -52,11 +52,13 @@ while True:
 
     # This isn't actually the "tick", this is setting the move reference based
     # on state.
-    cmd = controller.tick(traj)
+    controller.tick(traj)
     # print(traj.immediate_path[1])
 
     # Set motor command. TODO: deprecate, this is handled by the controller.
     # mhal.set_cmd(*cmd)
 
     # Poll for velocity (why not?)
-    print(mhal.get_vel())
+    # :w
+    # print(mhal.get_vel())
+    mhal.get_vel()
