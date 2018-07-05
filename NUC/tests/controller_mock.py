@@ -2,6 +2,7 @@
 Basic frame-by-frame line-following test.
 """
 
+import pyrealsense2 as rs
 import numpy as np
 from controller import Controller
 from motors import MotorHAL
@@ -10,8 +11,6 @@ from boltons.cacheutils import cachedproperty
 
 
 # Initialize the motor HAL
-
-input('Enter to start: ')
 
 DIMS = (848, 480)
 FPS = 15
@@ -24,10 +23,6 @@ config.enable_stream(rs.stream.color, DIMS[0], DIMS[1], rs.format.bgr8, FPS)
 # Pipeline for frame capture.
 pipeline = rs.pipeline()
 pipeline.start(config)
-
-# No debug.
-opts = FrameInfo.DEFAULT_OPTIONS.copy()
-opts['DEBUG'] = False
 
 controller = Controller()
 
@@ -44,10 +39,11 @@ class MockTrajectory:
 
 
 mhal = MotorHAL()
-time.sleep(2)
+
+input('waiting ...')
 
 mhal.set_cmd(0.2, 0.2)
-time.sleep(0.2)
+time.sleep(1.5)
 
 while True:
 
@@ -55,22 +51,19 @@ while True:
     depth_frame = frames.get_depth_frame()
     color_frame = frames.get_color_frame()
     if not depth_frame or not color_frame: continue
-    
-    frinfo = FrameInfo(color_frame, depth_frame, options=opts)
-
-    # TODO: we need to permanently store this ground plane transformation.
-    if opts['GROUND_PLANE'] is None:
-        opts['GROUND_PLANE'] = frinfo.front_ground_plane
 
     mt = MockTrajectory()
     cmd = controller.tick(mt)
+    print(cmd)
 
     # Set motor command.
     mhal.set_cmd(*cmd)
 
     # Poll for velocity
-    print(mhal.get_vel())
+    mhal.get_vel()
+    # print(mhal.get_vel())
 
-    if controller.slow_tick >= 50:
+    if controller.slow_tick >= 150:
         mhal.set_cmd(0,0)
+        time.sleep(100)
         break
