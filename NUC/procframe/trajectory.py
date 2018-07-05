@@ -7,8 +7,11 @@ class Trajectory:
     Use a FrameInfo object to plan a local trajectory.
     """
 
-    SLOW_SPEED = 1.0
+    SLOW_SPEED = 0.2
     FAST_SPEED = 1.4
+
+    LEFT_TURN = (0.15, 0.65)
+    RIGHT_TURN = (0.65, 0.15)
 
     LINE_DESIRED_DIST = 0.4
 
@@ -137,8 +140,15 @@ class Trajectory:
 
         # This is correct.
         fact = np.arcsin(np.cross(z, [0,1]))
-        v_l = Trajectory.SLOW_SPEED * min(1, 1 + fact)
-        v_r = Trajectory.SLOW_SPEED * min(1, 1 - fact)
+        v_l = Trajectory.SLOW_SPEED * max(min(1.2, 1 + fact), 0.7)
+        v_r = Trajectory.SLOW_SPEED * max(min(1.2, 1 - fact), 0.7)
+
+        if fact > 0.2:
+            return Trajectory.RIGHT_TURN
+        elif fact < -0.2:
+            return Trajectory.LEFT_TURN
+        
+        return (Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED)
 
         return (v_l, v_r)
 

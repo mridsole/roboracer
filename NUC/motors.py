@@ -80,8 +80,8 @@ class MotorHAL:
 
             # Send the motor command.
             motor_cmd = b'<M' + \
-                '{:.2f}'.format(r).encode() + b',' + \
-                '{:.2f}'.format(v).encode() + b'>'
+                '{:.2f}'.format(vl).encode() + b',' + \
+                '{:.2f}'.format(vr).encode() + b'>'
 
             connection.write(motor_cmd)
 

@@ -55,6 +55,10 @@ while True:
 
     print(traj.immediate_path)
     r, v = traj.immediate_path
+
+    if i % 5 == 0:
+        r = 0
+        v = 0
     
     # Set motor command.
     mhal.set_cmd(r, v)
