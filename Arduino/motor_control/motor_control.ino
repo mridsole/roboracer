@@ -22,7 +22,7 @@
 #define MAX_RAD_PER_S 30.8923
 #define MAX_SERVO 500*CONTROL_RATIO + 1000
 #define MIN_SERVO 1000
-
+#define MAX_WAIT_TIME 900
 
  /* -- Serial input info -- */
 uint8_t incomingByte = 0;
@@ -105,6 +105,11 @@ volatile unsigned long prevTimeFR = 0;
 volatile unsigned long prevTimeBL = 0;
 volatile unsigned long prevTimeBR = 0;
 
+unsigned long prevFLCheck = 0;
+unsigned long prevFRCheck = 0;
+unsigned long prevBLCheck = 0;
+unsigned long prevBRCheck = 0;
+
 /* Read rising edges */
 void frontLeftChange(){
   if(bitRead(PIND, 4) == 0){
@@ -168,44 +173,33 @@ void loop() {
     backLeftCountNow = backLeftCount;
     backRightCountNow = backRightCount;
   
-
     /* Calculates the time taken between each rotation */
-    if (frontLeftCountNow == frontLeftCountPrev &&(currTime - prevFLCheck > 900 || FLTimeDiff == 0)){
+    if (frontLeftCountNow == frontLeftCountPrev &&(currTime - prevFLCheck > MAX_WAIT_TIME || FLTimeDiff == 0)){
       prevFLCheck = currTime;
-      FlTimeDiff = 0;
+      FLTimeDiff = 0;
     }else{
       FLTimeDiff = currTimeFL-prevTimeFL;
     }    
-
-    if (frontLeftCountNow == frontLeftCountPrev && (checkZeroVel == 2 || FLTimeDiff == 0)){
-       FLTimeDiff = 0;
-    }else{
-       FLTimeDiff = currTimeFL-prevTimeFL;
-    }
     
-    if (frontRightCountNow == frontRightCountPrev && (checkZeroVel == 2 || FRTimeDiff == 0)){
+    if (frontRightCountNow == frontRightCountPrev && (currTime - prevFLCheck > MAX_WAIT_TIME || FRTimeDiff == 0)){
+       prevFRCheck = currTime;
        FRTimeDiff = 0;
     }else{
        FRTimeDiff = currTimeFR-prevTimeFR;
     }
     
-    if (backLeftCountNow == backLeftCountPrev && (checkZeroVel == 2 || BLTimeDiff == 0)){
+    if (backLeftCountNow == backLeftCountPrev && (currTime - prevBLCheck > MAX_WAIT_TIME || BLTimeDiff == 0)){
+       prevBLCheck = currTime;
        BLTimeDiff = 0;
     }else{
        BLTimeDiff = currTimeBL-prevTimeBL;
     }
     
-    if (backRightCountNow == backRightCountPrev && (checkZeroVel == 2 || BRTimeDiff == 0)){
+    if (backRightCountNow == backRightCountPrev && (currTime - prevBLCheck > MAX_WAIT_TIME || BRTimeDiff == 0)){
+       prevBRCheck = currTime;
        BRTimeDiff = 0;
     }else{
        BRTimeDiff = currTimeBR-prevTimeBR;
-    }
-
-    /* if wheel hasn't moved in the last 0.6 seconds, then assume its stationary */
-    if (checkZeroVel == 1){
-      checkZeroVel = 0;
-    }else{
-      checkZeroVel += 1;
     }
 
     Serial.print(FLTimeDiff);
@@ -343,9 +337,7 @@ void disable(){
 * @return Does not return
 */
 void moveRobot(float leftVelocity, float rightVelocity){
-  /* Convert instantaneous velocity to angular velocity */
-  float arcVelocity = velocity/arcRadius;
-  
+
   /* Convert radius and velocity into wheel angular velocities */
   float angularSpeedLeft = leftVelocity/(WHEEL_RADIUS);
   float angularSpeedRight = rightVelocity/(WHEEL_RADIUS);
