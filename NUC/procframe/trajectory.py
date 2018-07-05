@@ -140,17 +140,22 @@ class Trajectory:
 
         # This is correct.
         fact = np.arcsin(np.cross(z, [0,1]))
-        v_l = Trajectory.SLOW_SPEED * max(min(1.2, 1 + fact), 0.7)
-        v_r = Trajectory.SLOW_SPEED * max(min(1.2, 1 - fact), 0.7)
 
+        # TODO: What about these thresholds?
         if fact > 0.2:
-            return Trajectory.RIGHT_TURN
+            return (Trajectory.RIGHT_TURN, 1)
         elif fact < -0.2:
-            return Trajectory.LEFT_TURN
+            return (Trajectory.LEFT_TURN, -1)
         
-        return (Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED)
+        # Otherwise we just do this ...
+        return (
+            (Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED),
+            0
+        )
 
-        return (v_l, v_r)
+        # v_l = Trajectory.SLOW_SPEED * max(min(1.2, 1 + fact), 0.7)
+        # v_r = Trajectory.SLOW_SPEED * max(min(1.2, 1 - fact), 0.7)
+        # return (v_l, v_r)
 
         # # fact = self.CURVE_WEIGHT * np.arccos(np.dot(z, [0,1])) * np.sign(n.dot([0,1]))
         # # fact = self.CURVE_WEIGHT * np.cross(z, [0,1])# * np.sign(n.dot([0,1]))
