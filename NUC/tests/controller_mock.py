@@ -28,12 +28,12 @@ pipeline.start(config)
 class MockTrajectory:
 
     SLOW_SPEED = 0.2
-    LEFT_TURN = (0.15, 0.65)
-    RIGHT_TURN = (0.65, 0.15)
+    LEFT_TURN = (0.15, 0.75)
+    RIGHT_TURN = (0.75, 0.15)
 
     @cachedproperty
     def immediate_path(self):
-        return (MockTrajectory.RIGHT_TURN, 1)
+        return (MockTrajectory.LEFT_TURN, -1)
 
 
 mhal = MotorHAL()
@@ -43,7 +43,7 @@ input('waiting ...')
 controller = Controller(mhal)
 controller.set_cmd(((0.2, 0.2), 0))
 # mhal.set_cmd(0.2, 0.2)
-time.sleep(1.5)
+time.sleep(1.0)
 
 while True:
 

@@ -85,14 +85,16 @@ class MotorHAL:
 
             connection.write(motor_cmd)
 
-            # Read encoder values (in ms)
-            wheeltimes = list(
-                map(int, connection.readline()[:-1].split(b','))
-            )
+            time.sleep(1/20)
 
-            # Send the velocity data.
-            # TODO: Use Queue instead, so that we can block.
-            pipe.send(MotorHAL._velocity_from_times(wheeltimes))
+            # # Read encoder values (in ms)
+            # wheeltimes = list(
+            #     map(int, connection.readline()[:-1].split(b','))
+            # )
+
+            # # Send the velocity data.
+            # # TODO: Use Queue instead, so that we can block.
+            # pipe.send(MotorHAL._velocity_from_times(wheeltimes))
 
 
     def __init__(self, serialpath=SERIAL_PATH):
@@ -111,7 +113,7 @@ class MotorHAL:
         self.driver_proc.start()
 
         # Initialize velocity state.
-        self.vel = (0., 0.)
+        self.vels = (0., 0.)
 
 
     # def set_cmd(self, r, v):
