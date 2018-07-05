@@ -16,10 +16,9 @@ class FrameObjects:
         # Minimum points on an obstacle to be detected.
         'MIN_OBSTACLE_POINTS': 40,
 
-        # Minimum points on an obstacle to be detected.
-        'MIN_EXPLAINED_VARIANCE_SQRT': 0.09,
-
-        'MIN_EXPLAINED_VARIANCE_RATIO': 0.8
+        # Some additional thresholds for filtering lines based on PCA output.
+        'MIN_EXPLAINED_VARIANCE_SQRT': 0.10,
+        'MIN_EXPLAINED_VARIANCE_RATIO': 0.76
     }
 
     def __init__(self, frinfo, opts=DEFAULT_OPTIONS):
@@ -129,12 +128,15 @@ class FrameObjects:
             n_in = np.array([-v[1], v[0]])
             n, k = self.right_line
 
-        xint = k * n + 0.3 * n_in
+        xint = k * n + 0.5 * n_in
         return (v, xint)
 
 
     @cachedproperty
     def target_line_nk(self):
+
+        if self.target_line is None:
+            return None
 
         v, xint = self.target_line
         n = np.array([-v[1], v[0]])

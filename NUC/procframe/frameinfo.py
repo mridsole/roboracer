@@ -94,7 +94,7 @@ class FrameInfo:
         # Maximum line distance to consider
         # TODO: we should be able to increase this once we don't
         # have to deal with the lockers
-        'MAX_LINE_DISTANCE': 2.6,
+        'MAX_LINE_DISTANCE': 3.0,
         
         # Threshold of the left line, in HLS, (min, max).
         'THRESH_L': THRESH_BLUE_LINE,
@@ -126,7 +126,7 @@ class FrameInfo:
         'LINE_CANNY_MAX': 130,
 
         # How far from the ground plane are line points allowed to be?
-        'GROUND_PLANE_HEIGHT_TOL': 0.18,
+        'GROUND_PLANE_HEIGHT_TOL': 0.08,
 
         # Provide a ground plane to be used (instead of estimating
         # based on lines). If none, one will be calculated from lines.
@@ -338,7 +338,7 @@ class FrameInfo:
 
         H, W = self.frame_dims
         mask = np.ones(self.frame_dims)
-        mask[0:int(0.32 * H),:] = 0.
+        mask[0:int(0.30 * H),:] = 0.
         # return mask.flatten()
         mask = np.logical_and(mask.flatten(), self.local_object_vmask)
 

@@ -26,7 +26,7 @@ FPS = 15
 
 # Device setup.
 config = rs.config()
-config.enable_device_from_file('../data/finaltrack3.bag')
+config.enable_device_from_file('../data/finaltrack2.bag')
 config.enable_all_streams()
 pipeline = rs.pipeline()
 pipeline.start(config)
@@ -108,6 +108,7 @@ while True:
         n, k = frobj.left_line
         p1 = k * n
         v = np.array([n[1], -n[0]])
+        if v.dot([0,1]) < 0: v = -v
         p2 = p1 + 3*v
 
         # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
@@ -117,16 +118,18 @@ while True:
         n, k = frobj.right_line
         p1 = k * n
         v = np.array([-n[1], n[0]])
+        if v.dot([0,1]) < 0: v = -v
         p2 = p1 + 3*v
         # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
         line_r = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
 
-    if frobj.target_line:
-        v, xint = frobj.target_line
-        p1 = xint
-        p2 = xint + 5 * v
-        # ax.add_patch(ConnectionPatch(xyA=p1, xyB=p2, coordsA='data', coordsB='data'))
-        line_target = plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
+    if traj.avoid_line:
+        n, k = traj.avoid_line
+        p1 = k * n
+        v = np.array([n[1], -n[0]])
+        if v.dot([0,1]) < 0: v = -v
+        p2 = p1 + 3*v
+        line_target = plt.plot([p1[0], p2[0]], [p1[1], p2[1]], color='green')
 
     fig.canvas.draw_idle()
     plt.pause(0.001)

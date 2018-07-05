@@ -25,6 +25,100 @@ class Trajectory:
 
 
     @cachedproperty
+    def avoid_line(self):
+        """
+        This is the _actual_ target line, taking into account
+        a possibly visible obstacle.
+        """
+
+        # If we don't have an obstacle, just return the target line.
+        if self.frameobjects.obstacle is None:
+            return self.frameobjects.target_line_nk
+
+        c_o, r_o = self.frameobjects.obstacle
+
+        line_l = self.frameobjects.left_line
+        line_r = self.frameobjects.right_line
+
+        # If we have no lines, there's no avoid line.
+        if line_l is None and line_r is None:
+            return None
+
+        # If we have two lines:
+        if line_l is not None and line_r is not None:
+
+            nl, kl = line_l
+            nr, kr = line_r
+
+            # Decide which line is closest to the obstacle.
+            dl = np.abs(kl - nl.dot(c_o))
+            dr = np.abs(kr - nr.dot(c_o))
+
+            # Take the line that has the greater distance, and
+            # follow that one - this is our target.
+            is_left = dl > dr
+            is_right = not is_left
+
+            # Note: n points outwards.
+            n, k = line_l if is_left else line_r
+
+            if is_left:
+
+                # Take the right-pointing normal.
+                if n.dot([1,0]) < 0:
+                    n = -n
+                    k = -k
+
+                # Project to the right.
+                d_t = 0.4
+                return (n, k + d_t)
+
+
+            else:
+
+                # Take the left-pointing normal.
+                if n.dot([-1,0]) < 0:
+                    n = -n
+                    k = -k
+
+                # Project to the left.
+                d_t = 0.4
+                return (n, k + d_t)
+
+
+        # Otherewise, we only have one line: find this line.
+        line = None
+        is_left = None
+        if line_l is not None:
+            is_left = True
+            line = line_l
+        else:
+            is_left = False
+            line = line_r
+
+        n, k = line
+        if is_left:
+            # Take the right-pointing normal.
+            if n.dot([1,0]) < 0:
+                n = -n
+                k = -k
+        else:
+            # Take the left-pointing normal.
+            if n.dot([-1,0]) < 0:
+                n = -n
+                k = -k
+        
+        d_o = np.abs(k - n.dot(c_o))
+        if d_o < 0.7:
+            d_t = d_o + r_o + 0.4
+            # d_t = d_o # + 0.4
+        else:
+            d_t = 0.4
+
+        return (n, k + d_t)
+
+
+    @cachedproperty
     def immediate_path(self):
 
         if self.frameobjects.target_line is None:
