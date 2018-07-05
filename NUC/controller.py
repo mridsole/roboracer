@@ -28,13 +28,13 @@ class Controller:
     STOP_TICKS = 0
 
     # The slow command to send on such ticks.
-    SLOW_CMD = (0.05, 0.05)
+    SLOW_CMD = (0.00, 0.00)
 
     # How many ticks for slow?
-    SLOW_TICKS = 4
+    SLOW_TICKS = 5
 
     # How many ticks for fast?
-    FAST_TICKS = 5
+    FAST_TICKS = 4
 
 
     def _next_slow(slowstate):
