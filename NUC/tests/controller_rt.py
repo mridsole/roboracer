@@ -13,9 +13,6 @@ import time
 
 # First initialize the motor HAL which opens a connection with the Arduino.
 # This will make the wheels spin for a couple of seconds.
-mhal = MotorHAL()
-input('Enter to start: ')
-controller = Controller(mhal)
 
 DIMS = (848, 480)
 FPS = 15
@@ -28,6 +25,11 @@ config.enable_stream(rs.stream.color, DIMS[0], DIMS[1], rs.format.bgr8, FPS)
 # Pipeline for frame capture.
 pipeline = rs.pipeline()
 pipeline.start(config)
+
+input('Enter to start: ')
+mhal = MotorHAL()
+time.sleep(2)
+controller = Controller(mhal)
 
 # No debug.
 opts = FrameInfo.DEFAULT_OPTIONS.copy()
@@ -52,11 +54,13 @@ while True:
 
     # This isn't actually the "tick", this is setting the move reference based
     # on state.
-    cmd = controller.tick(traj)
+    controller.tick(traj)
     # print(traj.immediate_path[1])
 
     # Set motor command. TODO: deprecate, this is handled by the controller.
     # mhal.set_cmd(*cmd)
 
     # Poll for velocity (why not?)
-    print(mhal.get_vel())
+    # :w
+    # print(mhal.get_vel())
+    mhal.get_vel()

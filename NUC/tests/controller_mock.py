@@ -33,7 +33,7 @@ class MockTrajectory:
 
     @cachedproperty
     def immediate_path(self):
-        return (MockTrajectory.LEFT_TURN, -1)
+        return (MockTrajectory.RIGHT_TURN, 1)
 
 
 mhal = MotorHAL()
@@ -41,7 +41,7 @@ mhal = MotorHAL()
 input('waiting ...')
 
 controller = Controller(mhal)
-controller.set_cmd(((0.2, 0.2), 0))
+# controller.set_cmd(((0.2, 0.2), 0))
 # mhal.set_cmd(0.2, 0.2)
 time.sleep(1.0)
 

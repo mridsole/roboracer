@@ -7,11 +7,11 @@ class Trajectory:
     Use a FrameInfo object to plan a local trajectory.
     """
 
-    SLOW_SPEED = 0.2
+    SLOW_SPEED = 0.22
     FAST_SPEED = 1.4
 
-    LEFT_TURN = (0.15, 0.65)
-    RIGHT_TURN = (0.65, 0.15)
+    LEFT_TURN = (0.15, 0.75)
+    RIGHT_TURN = (0.75, 0.15)
 
     LINE_DESIRED_DIST = 0.4
 
@@ -143,12 +143,13 @@ class Trajectory:
 
         # TODO: What about these thresholds? This is about a 22 degree window
         # (which is reasonable.
-        if fact > 0.2:
+        if fact > 0.20:
             return (Trajectory.RIGHT_TURN, 1)
-        elif fact < -0.2:
+        elif fact < -0.20:
             return (Trajectory.LEFT_TURN, -1)
         
         # Otherwise, just go forward slowly.
+        print('Should be (0.2, 0.2)')
         return (
             (Trajectory.SLOW_SPEED, Trajectory.SLOW_SPEED),
             0
